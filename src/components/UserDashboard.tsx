@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTicketSocket } from "../hooks/useTicketSocket";
 import {
   User as UserIcon,
   LayoutDashboard,
@@ -114,6 +115,36 @@ export default function UserDashboard({
   const [newTicketDesc, setNewTicketDesc] = useState("");
   const [chatMessage, setChatMessage] = useState("");
   const [showCreateTicketModal, setShowCreateTicketModal] = useState(false);
+  // ref برای اسکرول خودکار به آخرین پیام
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // ─── WebSocket: real-time تیکت‌ها ──────────────────────────────────────────
+  useTicketSocket({
+    role: "user",
+    activeTicketId: activeTicket?.id,
+    onMessage: (msg) => {
+      if (msg.type === "new_message" && activeTicket && msg.ticketId === activeTicket.id) {
+        // پیام جدید رو به تیکت فعال اضافه می‌کنیم
+        setActiveTicket(prev => prev ? {
+          ...prev,
+          status: msg.newStatus as any,
+          messages: [...prev.messages, msg.message],
+        } : prev);
+        setTickets(prev => prev.map(t =>
+          t.id === msg.ticketId
+            ? { ...t, status: msg.newStatus as any, messages: [...t.messages, msg.message] }
+            : t
+        ));
+        // اسکرول به آخر
+        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+      }
+    },
+  });
+
+  // اسکرول به آخرین پیام وقتی تیکت عوض می‌شه
+  useEffect(() => {
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, [activeTicket?.id]);
 
   // Simulated drag and drop uploads progress state
   const [uploadProgress, setUploadProgress] = useState<{
@@ -310,31 +341,17 @@ export default function UserDashboard({
     if (!chatMessage || !activeTicket) return;
 
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/user/${user.username}/tickets/${activeTicket.id}/messages`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: chatMessage, sender: "user" }),
+          body: JSON.stringify({ message: chatMessage }),
         },
       );
       if (res.ok) {
-        const newMsg = await res.json();
-        // Update local tickets
-        const updatedTickets = tickets.map((t) => {
-          if (t.id === activeTicket.id) {
-            return {
-              ...t,
-              status: "under_review" as const,
-              messages: [...t.messages, newMsg],
-            };
-          }
-          return t;
-        });
-        setTickets(updatedTickets);
-        setActiveTicket(
-          updatedTickets.find((t) => t.id === activeTicket.id) || null,
-        );
+        // پیام ارسال شد — WebSocket خودش state رو آپدیت می‌کنه
+        // فقط input رو خالی می‌کنیم
         setChatMessage("");
       }
     } catch (err) {
@@ -498,6 +515,7 @@ export default function UserDashboard({
                         </div>
                       </div>
                     ))}
+                    <div ref={chatEndRef} />
                   </div>
                   {activeTicket.status !== "ended" ? (
                     <form

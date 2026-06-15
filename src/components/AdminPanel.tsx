@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTicketSocket } from "../hooks/useTicketSocket";
 import {
   ShieldCheck,
   LayoutDashboard,
@@ -57,6 +58,41 @@ export default function AdminPanel({
   };
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // ─── WebSocket: real-time تیکت‌ها ──────────────────────────────────────────
+  useTicketSocket({
+    role: "admin",
+    onMessage: (msg) => {
+      if (msg.type === "new_message") {
+        // پیام جدید — اگه همین تیکت باز هست آپدیت کن
+        setActiveTicket(prev => {
+          if (prev && prev.id === msg.ticketId) {
+            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+            return { ...prev, status: msg.newStatus as any, messages: [...prev.messages, msg.message] };
+          }
+          return prev;
+        });
+        // لیست تیکت‌ها رو هم آپدیت کن
+        setTicketsList(prev => prev.map(t =>
+          t.id === msg.ticketId
+            ? { ...t, status: msg.newStatus as any }
+            : t
+        ));
+      }
+      if (msg.type === "ticket_updated") {
+        // تیکت جدید یا تغییر وضعیت — لیست رو آپدیت کن
+        setTicketsList(prev => prev.map(t =>
+          t.id === msg.ticketId ? { ...t, status: msg.newStatus as any } : t
+        ));
+      }
+    },
+  });
+
+  // اسکرول به آخرین پیام وقتی تیکت عوض می‌شه
+  useEffect(() => {
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, [activeTicket?.id]);
 
   // States
   const [deskStats, setDeskStats] = useState({
@@ -372,15 +408,9 @@ export default function AdminPanel({
         },
       );
       if (res.ok) {
-        const newMsg = await res.json();
-        const updated = {
-          ...activeTicket,
-          messages: [...activeTicket.messages, newMsg],
-        };
-        setActiveTicket(updated);
+        // WebSocket خودش پیام رو به state اضافه می‌کنه
+        // فقط input رو خالی می‌کنیم
         setAdminResponse("");
-        // refresh list
-        fetchAdminData();
       }
     } catch (e) {
       console.error(e);
@@ -1223,6 +1253,7 @@ export default function AdminPanel({
                           </div>
                         </div>
                       ))}
+                      <div ref={chatEndRef} />
                     </div>
 
                     {/* Chat reply form */}

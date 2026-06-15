@@ -5,6 +5,8 @@ import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
 import { createServer as createViteServer } from "vite";
 import crypto from "crypto";
+import { WebSocketServer, WebSocket } from "ws";
+import { createServer as createHttpServer } from "http";
 
 const app = express();
 app.set('trust proxy', 1);
@@ -13,6 +15,38 @@ const PORT = (process.env.PORT && !process.env.DISABLE_HMR)
   ? parseInt(process.env.PORT, 10)
   : 3000;
 const JWT_SECRET = "super_secret_jwt_token_for_card_platform";
+
+// ─── WebSocket Manager ───────────────────────────────────────────────────────
+// هر کلاینت متصل با ticketId و نقشش (user/admin) ثبت می‌شه
+interface WsClient {
+  ws: WebSocket;
+  ticketId: string | null; // کدوم تیکت رو داره می‌بینه
+  username: string;
+  role: "user" | "admin";
+}
+
+const wsClients: WsClient[] = [];
+
+// ارسال پیام به همه کسایی که یه تیکت خاص رو باز دارن
+function broadcastToTicket(ticketId: string, payload: object) {
+  const msg = JSON.stringify(payload);
+  wsClients.forEach(client => {
+    if (client.ticketId === ticketId && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(msg);
+    }
+  });
+}
+
+// اطلاع به ادمین که تیکت جدید اومد یا تیکتی آپدیت شد
+function notifyAdmin(payload: object) {
+  const msg = JSON.stringify(payload);
+  wsClients.forEach(client => {
+    if (client.role === "admin" && client.ws.readyState === WebSocket.OPEN) {
+      client.ws.send(msg);
+    }
+  });
+}
+
 
 // Absolute path to persistence file
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -823,6 +857,24 @@ app.post("/api/user/:username/tickets/:ticketId/messages", verifyToken, (req: an
   }
   
   saveDB(db);
+
+  // ─── WebSocket broadcast ───────────────────────────────────────────────────
+  // پیام جدید رو به همه کسایی که این تیکت رو باز دارن می‌فرستیم
+  broadcastToTicket(ticketId, {
+    type: "new_message",
+    ticketId,
+    message: newMsg,
+    newStatus: db.tickets[ticketIndex].status,
+  });
+
+  // به ادمین هم اطلاع می‌دیم (اگه تیکت رو باز نداشت، نوتیف بگیره)
+  notifyAdmin({
+    type: "ticket_updated",
+    ticketId,
+    username,
+    newStatus: db.tickets[ticketIndex].status,
+  });
+
   return res.json(newMsg);
 });
 
@@ -1095,17 +1147,69 @@ async function bootstrap() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    // Serve index.html for all requests to let React Router navigate client-side properly
     app.get("*", (req, res, next) => {
-      if (req.path.startsWith("/api")) {
-        return next();
-      }
+      if (req.path.startsWith("/api")) return next();
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[FULL-STACK DEV] Server is running on http://localhost:${PORT}`);
+  // HTTP server که هم Express و هم WebSocket روش کار می‌کنن
+  const httpServer = createHttpServer(app);
+
+  // WebSocket Server روی همون پورت
+  const wss = new WebSocketServer({ server: httpServer });
+
+  wss.on("connection", (ws, req) => {
+    // توکن رو از query string می‌گیریم: ws://...?token=xxx
+    const url = new URL(req.url || "", "http://localhost");
+    const token = url.searchParams.get("token");
+
+    let username = "anonymous";
+    let role: "user" | "admin" = "user";
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        username = decoded.username;
+        role = username === "admin" ? "admin" : "user";
+      } catch {
+        ws.close(1008, "توکن نامعتبر");
+        return;
+      }
+    }
+
+    const client: WsClient = { ws, ticketId: null, username, role };
+    wsClients.push(client);
+    console.log(`[WS] متصل شد: ${username} (${role}) — مجموع: ${wsClients.length}`);
+
+    ws.on("message", (raw) => {
+      try {
+        const msg = JSON.parse(raw.toString());
+        // کلاینت می‌گه کدوم تیکت رو داره می‌بینه
+        if (msg.type === "watch_ticket") {
+          client.ticketId = msg.ticketId || null;
+        }
+        // ادمین می‌تونه بگه همه تیکت‌ها رو notify کن
+        if (msg.type === "watch_all" && role === "admin") {
+          client.ticketId = "ALL_ADMIN";
+        }
+      } catch {}
+    });
+
+    ws.on("close", () => {
+      const idx = wsClients.indexOf(client);
+      if (idx !== -1) wsClients.splice(idx, 1);
+      console.log(`[WS] قطع شد: ${username} — مجموع: ${wsClients.length}`);
+    });
+
+    ws.on("error", (err) => console.error("[WS Error]", err.message));
+
+    // خوش‌آمد
+    ws.send(JSON.stringify({ type: "connected", username, role }));
+  });
+
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`[SERVER] در حال اجرا روی http://localhost:${PORT}`);
   });
 }
 
