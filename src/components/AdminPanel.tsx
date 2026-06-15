@@ -81,10 +81,14 @@ export default function AdminPanel({
         ));
       }
       if (msg.type === "ticket_updated") {
-        // تیکت جدید یا تغییر وضعیت — لیست رو آپدیت کن
+        // تغییر وضعیت تیکت موجود
         setTicketsList(prev => prev.map(t =>
           t.id === msg.ticketId ? { ...t, status: msg.newStatus as any } : t
         ));
+      }
+      if (msg.type === "new_ticket") {
+        // تیکت جدید — به اول لیست اضافه می‌شه
+        setTicketsList(prev => [msg.ticket, ...prev]);
       }
     },
   });
@@ -138,17 +142,32 @@ export default function AdminPanel({
   const [adTitle2, setAdTitle2] = useState("");
   const [adTitle3, setAdTitle3] = useState("");
 
+  // آپلود تصویر ادمین به سرور
+  const uploadToServer = async (
+    file: File,
+    callback: (url: string) => void,
+  ) => {
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await apiFetch("/api/admin/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        callback(data.url);
+      } else {
+        alert("خطا در آپلود تصویر.");
+      }
+    } catch {
+      alert("خطا در اتصال به سرور.");
+    }
+  };
+
   const handleFileInputChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     callback: (url: string) => void,
   ) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        callback(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      uploadToServer(e.target.files[0], callback);
     }
   };
 
@@ -346,16 +365,23 @@ export default function AdminPanel({
   };
 
   // QR approval mock image generation & approval saving
-  const handleUploadApprovedQr = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      setSimulatingUpload(true);
-      setTimeout(() => {
-        setUploadedQrBase64(reader.result as string);
-        setSimulatingUpload(false);
-      }, 1000);
-    };
-    reader.readAsDataURL(file);
+  const handleUploadApprovedQr = async (file: File) => {
+    setSimulatingUpload(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await apiFetch("/api/admin/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        setUploadedQrBase64(data.url);
+      } else {
+        alert("خطا در آپلود QR.");
+      }
+    } catch {
+      alert("خطا در اتصال.");
+    } finally {
+      setSimulatingUpload(false);
+    }
   };
 
   const generateAutoQrForUser = () => {

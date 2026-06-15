@@ -245,36 +245,37 @@ export default function UserDashboard({
     }
   };
 
-  // Simulating image upload with beautiful 1% to 100% progress
-  const simulateImageUpload = (
+  // آپلود واقعی فایل به سرور — URL برمی‌گرده نه base64
+  const uploadImageToServer = async (
     file: File,
     targetKey: string,
     callback: (url: string) => void,
   ) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      let progress = 0;
-      setUploadProgress((prev) => ({ ...prev, [targetKey]: 0 }));
-
-      const interval = setInterval(() => {
-        progress += Math.floor(Math.random() * 15) + 5;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
-          // Set final image URL
-          callback(reader.result as string);
-          setTimeout(() => {
-            setUploadProgress((prev) => {
-              const copy = { ...prev };
-              delete copy[targetKey];
-              return copy;
-            });
-          }, 1500);
-        }
-        setUploadProgress((prev) => ({ ...prev, [targetKey]: progress }));
-      }, 100);
-    };
-    reader.readAsDataURL(file);
+    setUploadProgress((prev) => ({ ...prev, [targetKey]: 10 }));
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await apiFetch("/api/upload", { method: "POST", body: formData });
+      setUploadProgress((prev) => ({ ...prev, [targetKey]: 80 }));
+      if (res.ok) {
+        const data = await res.json();
+        setUploadProgress((prev) => ({ ...prev, [targetKey]: 100 }));
+        callback(data.url);
+        setTimeout(() => {
+          setUploadProgress((prev) => {
+            const copy = { ...prev };
+            delete copy[targetKey];
+            return copy;
+          });
+        }, 1000);
+      } else {
+        setUploadProgress((prev) => { const c = { ...prev }; delete c[targetKey]; return c; });
+        alert("خطا در آپلود تصویر. لطفاً دوباره تلاش کنید.");
+      }
+    } catch {
+      setUploadProgress((prev) => { const c = { ...prev }; delete c[targetKey]; return c; });
+      alert("خطا در اتصال به سرور.");
+    }
   };
 
   const handleDragOver = (e: React.DragEvent, id: string) => {
@@ -295,7 +296,7 @@ export default function UserDashboard({
     e.preventDefault();
     setDragActive((prev) => ({ ...prev, [id]: false }));
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      simulateImageUpload(e.dataTransfer.files[0], id, callback);
+      uploadImageToServer(e.dataTransfer.files[0], id, callback);
     }
   };
 
@@ -305,7 +306,7 @@ export default function UserDashboard({
     callback: (url: string) => void,
   ) => {
     if (e.target.files && e.target.files[0]) {
-      simulateImageUpload(e.target.files[0], id, callback);
+      uploadImageToServer(e.target.files[0], id, callback);
     }
   };
 

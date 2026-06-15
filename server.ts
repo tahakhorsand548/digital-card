@@ -7,1209 +7,626 @@ import { createServer as createViteServer } from "vite";
 import crypto from "crypto";
 import { WebSocketServer, WebSocket } from "ws";
 import { createServer as createHttpServer } from "http";
+import Database from "better-sqlite3";
+import multer from "multer";
 
 const app = express();
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 
 const PORT = (process.env.PORT && !process.env.DISABLE_HMR)
-  ? parseInt(process.env.PORT, 10)
-  : 3000;
-const JWT_SECRET = "super_secret_jwt_token_for_card_platform";
+  ? parseInt(process.env.PORT, 10) : 3000;
 
-// ─── WebSocket Manager ───────────────────────────────────────────────────────
-// هر کلاینت متصل با ticketId و نقشش (user/admin) ثبت می‌شه
-interface WsClient {
-  ws: WebSocket;
-  ticketId: string | null; // کدوم تیکت رو داره می‌بینه
-  username: string;
-  role: "user" | "admin";
+const JWT_SECRET = process.env.JWT_SECRET || "dev_only_secret_change_in_production";
+if (!process.env.JWT_SECRET) {
+  console.warn("⚠️  JWT_SECRET تنظیم نشده! در production حتماً از متغیر محیطی استفاده کنید.");
 }
 
-const wsClients: WsClient[] = [];
+// ─── پوشه‌های داده ────────────────────────────────────────────────────────────
+const DATA_DIR    = path.join(process.cwd(), "data");
+const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
+[DATA_DIR, UPLOADS_DIR].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
 
-// ارسال پیام به همه کسایی که یه تیکت خاص رو باز دارن
-function broadcastToTicket(ticketId: string, payload: object) {
-  const msg = JSON.stringify(payload);
-  wsClients.forEach(client => {
-    if (client.ticketId === ticketId && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(msg);
-    }
-  });
-}
+// ─── SQLite ───────────────────────────────────────────────────────────────────
+const db = new Database(path.join(DATA_DIR, "app.db"));
+db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
 
-// اطلاع به ادمین که تیکت جدید اومد یا تیکتی آپدیت شد
-function notifyAdmin(payload: object) {
-  const msg = JSON.stringify(payload);
-  wsClients.forEach(client => {
-    if (client.role === "admin" && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(msg);
-    }
-  });
-}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    username          TEXT PRIMARY KEY,
+    full_name         TEXT NOT NULL,
+    email             TEXT UNIQUE NOT NULL,
+    phone             TEXT UNIQUE NOT NULL,
+    password_hash     TEXT NOT NULL,
+    is_suspended      INTEGER NOT NULL DEFAULT 0,
+    qr_image_url      TEXT NOT NULL DEFAULT '',
+    qr_request_status TEXT NOT NULL DEFAULT 'none',
+    qr_request_time   TEXT NOT NULL DEFAULT '',
+    card_data         TEXT NOT NULL DEFAULT '{}'
+  );
+  CREATE TABLE IF NOT EXISTS tickets (
+    id            TEXT PRIMARY KEY,
+    username      TEXT NOT NULL,
+    user_fullname TEXT NOT NULL,
+    title         TEXT NOT NULL,
+    description   TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'pending',
+    created_at    TEXT NOT NULL,
+    messages      TEXT NOT NULL DEFAULT '[]',
+    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+  );
+  CREATE TABLE IF NOT EXISTS announcements (
+    id          TEXT PRIMARY KEY,
+    title       TEXT NOT NULL,
+    description TEXT NOT NULL,
+    image       TEXT NOT NULL DEFAULT '',
+    created_at  TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS banners (
+    id        TEXT PRIMARY KEY,
+    image_url TEXT NOT NULL DEFAULT '',
+    title     TEXT NOT NULL DEFAULT ''
+  );
+`);
 
-
-// Absolute path to persistence file
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_FILE = path.join(DATA_DIR, "db.json");
-
-// Ensure data folder exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-// Password Hashing standards using PBKDF2
+// ─── رمزگذاری ─────────────────────────────────────────────────────────────────
 const HASH_ITERATIONS = 15000;
-const HASH_KEY_LEN = 64;
-const HASH_DIGEST = "sha512";
+const HASH_KEY_LEN    = 64;
+const HASH_DIGEST     = "sha512";
 
 function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16).toString("hex");
+  const salt       = crypto.randomBytes(16).toString("hex");
   const derivedKey = crypto.pbkdf2Sync(password, salt, HASH_ITERATIONS, HASH_KEY_LEN, HASH_DIGEST);
   return `pbkdf2$${HASH_ITERATIONS}$${salt}$${derivedKey.toString("hex")}`;
 }
 
 function verifyPassword(password: string, storedHash: string): boolean {
   if (!storedHash) return false;
-  
-  // Support legacy plain text passwords during migration
-  if (!storedHash.startsWith("pbkdf2$")) {
-    return password === storedHash;
-  }
-  
+  if (!storedHash.startsWith("pbkdf2$")) return password === storedHash;
   try {
-    const parts = storedHash.split("$");
-    if (parts.length !== 4) return false;
-    
-    const iterations = parseInt(parts[1], 10);
-    const salt = parts[2];
-    const originalHashHex = parts[3];
-    
-    const derivedKey = crypto.pbkdf2Sync(password, salt, iterations, HASH_KEY_LEN, HASH_DIGEST);
-    const derivedHashHex = derivedKey.toString("hex");
-    
-    return crypto.timingSafeEqual(
-      Buffer.from(originalHashHex, "hex"),
-      Buffer.from(derivedHashHex, "hex")
-    );
-  } catch (err) {
-    console.error("Password verification error:", err);
-    return false;
-  }
+    const [, iter, salt, origHex] = storedHash.split("$");
+    const derived = crypto.pbkdf2Sync(password, salt, parseInt(iter, 10), HASH_KEY_LEN, HASH_DIGEST);
+    return crypto.timingSafeEqual(Buffer.from(origHex, "hex"), Buffer.from(derived.toString("hex"), "hex"));
+  } catch { return false; }
 }
 
-// Ensure database file exists with seed data
-if (!fs.existsSync(DB_FILE)) {
-  const initialData = {
-    users: [
-      {
-        fullName: "مدیر کل پلتفرم",
-        username: "admin",
-        email: "admin@gmail.com",
-        phone: "09121234567",
-        passwordHash: hashPassword("admin"), // Securely pre-hashed password
-        isSuspended: false,
-        qrImageUrl: "",
-        qrRequestStatus: "none",
-        qrRequestTime: "",
-        cardData: createDefaultCardData("کارت نمونه ادمین"),
-      }
-    ],
-    announcements: [],
-    banners: [
-      { id: "banner1", imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80", title: "کارت ویزیت دیجیتال رایگان خود را بسازید" },
-      { id: "banner2", imageUrl: "https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=800&q=80", title: "چاپ کارت فیزیکی با برچسب هوشمند NFC" },
-      { id: "banner3", imageUrl: "https://images.unsplash.com/photo-1600132806370-bf17e65e942f?w=800&q=80", title: "کسب و کار خود را در نقشه گوگل ثبت کنید" }
-    ],
-    tickets: []
-  };
-  fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), "utf8");
-}
-
-// Auto self-heal admin user and update password hash if outdated/corrupt
-try {
-  const dbForInit = getDB();
-  const adminUserIdx = dbForInit.users.findIndex((u: any) => u.username === "admin");
-  if (adminUserIdx !== -1) {
-    const adminUser = dbForInit.users[adminUserIdx];
-    // Check if the current hash is not matching "admin", or is not standard
-    if (!verifyPassword("admin", adminUser.passwordHash)) {
-      console.log("[Admin Healing] Password hash mismatch detected. Re-hashing password to 'admin'...");
-      adminUser.passwordHash = hashPassword("admin");
-      saveDB(dbForInit);
-    }
-  } else {
-    // If admin has been completely deleted by accident, restore active admin role
-    console.log("[Admin Healing] Admin account not found! Re-creating default admin credentials...");
-    dbForInit.users.push({
-      fullName: "مدیر کل پلتفرم",
-      username: "admin",
-      email: "admin@gmail.com",
-      phone: "09121234567",
-      passwordHash: hashPassword("admin"),
-      isSuspended: false,
-      qrImageUrl: "",
-      qrRequestStatus: "none",
-      qrRequestTime: "",
-      cardData: {
-        businessName: "کارت نمونه ادمین",
-        brandManager: "امیرحسین رضایی",
-        slogan: "آینده در دستان شما با کارت ویزیت هوشمند",
-        description: "ما در مجموعه خود جدیدترین دستاوردهای تکنولوژی در حوزه برندینگ و بیزینس کارت دیجیتال را ارائه می کنیم. با ما کسب و کار خود را به اوج برسانید.",
-        logoUrl: "https://images.unsplash.com/photo-1572021335469-31706a17aaef?w=200&q=80",
-        bgImageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80",
-        phones: ["09120000000"],
-        landlines: ["02188888888"],
-        branches: [
-          {
-            id: "branch-1",
-            title: "دفتر مرکزی تهران",
-            address: "تهران، خیابان ولیعصر، نرسیده به میدان ونک، برج نگار، طبقه ۱۰",
-            googleMaps: "https://maps.google.com",
-            neshan: "https://neshan.org",
-            balad: "https://balad.ir"
-          }
-        ],
-        website: "https://example.com",
-        socials: {
-          instagram: "https://instagram.com",
-          telegram: "https://t.me",
-          whatsapp: "https://wa.me/989120000000"
-        },
-        services: [],
-        socialLinks: [],
-        stats: {
-          totalVisits: 10,
-          uniqueVisitors: 4,
-          phoneClicks: 2,
-          locationClicks: 1
-        }
-      }
-    });
-    saveDB(dbForInit);
-  }
-} catch (e) {
-  console.error("Error running admin self-heal routine:", e);
-}
-
-function createDefaultCardData(brandName: string) {
-  // Generate last 7 days starting from today down
-  const dailyVisits: { [date: string]: number } = {};
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const jDate = getJalaliDate(d);
-    dailyVisits[jDate] = Math.floor(Math.random() * 20) + 5;
-  }
-
-  return {
-    businessName: brandName,
-    brandManager: "امیرحسین رضایی",
-    slogan: "آینده در دستان شما با کارت ویزیت هوشمند",
-    description: "ما در مجموعه خود جدیدترین دستاوردهای تکنولوژی در حوزه برندینگ و بیزینس کارت دیجیتال را ارائه می کنیم. با ما کسب و کار خود را به اوج برسانید.",
-    logoUrl: "https://images.unsplash.com/photo-1572021335469-31706a17aaef?w=200&q=80",
-    bgImageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80",
-    phones: ["09120000000"],
-    landlines: ["02188888888"],
-    branches: [
-      {
-        id: "branch-1",
-        title: "دفتر مرکزی تهران",
-        address: "تهران، خیابان ولیعصر، نرسیده به میدان ونک، برج نگار، طبقه ۱۰",
-        googleMaps: "https://maps.google.com",
-        neshan: "https://neshan.org",
-        balad: "https://balad.ir"
-      }
-    ],
-    website: "https://example.com",
-    socials: {
-      instagram: "https://instagram.com",
-      telegram: "https://t.me",
-      whatsapp: "https://wa.me/989120000000",
-      youtube: "https://youtube.com",
-      aparat: "https://aparat.com",
-      bale: "https://ble.ir",
-      rubika: "https://rubika.ir",
-      soroush: "https://splus.ir"
-    },
-    gallery: [
-      "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80",
-      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&q=80",
-      "https://images.unsplash.com/photo-1542744094-3a31f103e35f?w=600&q=80"
-    ],
-    products: [
-      {
-        id: "prod-1",
-        title: "کارت ویزیت فلزی طلایی NFC",
-        description: "دارای چیپ NTAG213 با روکش استیل طلایی ضد خش",
-        price: "450,000 تومان",
-        link: "https://example.com/p1",
-        imageUrl: "https://images.unsplash.com/photo-1589561084283-930aa7b1ce50?w=400&q=80"
-      },
-      {
-        id: "prod-2",
-        title: "مکعب رومیزی هوشمند پودینگ",
-        description: "ایده آل برای کافه ها و رستوران ها جهت ثبت بازخورد کاربران",
-        price: "320,000 تومان",
-        link: "https://example.com/p2",
-        imageUrl: "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?w=400&q=80"
-      }
-    ],
-    workingDays: {
-      "شنبه": { isOpen: true, openTime: "09:00", closeTime: "18:00", isClosed: false },
-      "یکشنبه": { isOpen: true, openTime: "09:00", closeTime: "18:00", isClosed: false },
-      "دوشنبه": { isOpen: true, openTime: "09:00", closeTime: "18:00", isClosed: false },
-      "سه شنبه": { isOpen: true, openTime: "09:00", closeTime: "18:00", isClosed: false },
-      "چهارشنبه": { isOpen: true, openTime: "09:00", closeTime: "18:00", isClosed: false },
-      "پنجشنبه": { isOpen: true, openTime: "09:00", closeTime: "14:00", isClosed: false },
-      "جمعه": { isOpen: false, openTime: "00:00", closeTime: "00:00", isClosed: true }
-    },
-    design: {
-      template: "modern",
-      colorTheme: "#3B82F6",
-      isDark: false
-    },
-    stats: {
-      totalVisits: 450,
-      scans: 120,
-      linkOpens: 330,
-      buttonClicks: 85,
-      dailyVisits: dailyVisits
-    }
-  };
-}
-
+// ─── تاریخ جلالی ─────────────────────────────────────────────────────────────
 function getJalaliDate(date: Date): string {
-  // Simple conversion helper for demo charts
-  const option = { month: "short", day: "numeric" } as const;
-  return new Intl.DateTimeFormat("fa-IR", option).format(date);
+  return new Intl.DateTimeFormat("fa-IR", { month: "short", day: "numeric" } as const).format(date);
 }
 
-// Database Read/Write Utilities with In-Memory Caching and Atomic Async Write Queue
-let dbCache: any = null;
-let writeQueue: Promise<void> = Promise.resolve();
-
-function getDB() {
-  if (dbCache) {
-    return dbCache;
-  }
-  try {
-    if (fs.existsSync(DB_FILE)) {
-      const raw = fs.readFileSync(DB_FILE, "utf8");
-      dbCache = JSON.parse(raw);
-    } else {
-      dbCache = { users: [], announcements: [], banners: [], tickets: [] };
-    }
-    return dbCache;
-  } catch (err) {
-    console.error("Error reading database file", err);
-    return { users: [], announcements: [], banners: [], tickets: [] };
-  }
+// ─── داده پیش‌فرض کارت ───────────────────────────────────────────────────────
+function createDefaultCardData(brandName: string) {
+  return {
+    businessName: brandName, brandManager: "", slogan: "", description: "",
+    logoUrl: "", bgImageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80",
+    phones: [], landlines: [], branches: [], website: "",
+    socials: { instagram: "", telegram: "", whatsapp: "", youtube: "", aparat: "", bale: "", rubika: "", soroush: "" },
+    gallery: [], products: [],
+    workingDays: {
+      "شنبه":    { isOpen: true,  openTime: "09:00", closeTime: "18:00", isClosed: false },
+      "یکشنبه":  { isOpen: true,  openTime: "09:00", closeTime: "18:00", isClosed: false },
+      "دوشنبه":  { isOpen: true,  openTime: "09:00", closeTime: "18:00", isClosed: false },
+      "سه شنبه": { isOpen: true,  openTime: "09:00", closeTime: "18:00", isClosed: false },
+      "چهارشنبه":{ isOpen: true,  openTime: "09:00", closeTime: "18:00", isClosed: false },
+      "پنجشنبه": { isOpen: true,  openTime: "09:00", closeTime: "14:00", isClosed: false },
+      "جمعه":    { isOpen: false, openTime: "00:00", closeTime: "00:00", isClosed: true  },
+    },
+    design: { template: "modern", colorTheme: "#3B82F6", isDark: false },
+    stats:  { totalVisits: 0, scans: 0, linkOpens: 0, buttonClicks: 0, dailyVisits: {} },
+  };
 }
 
-function saveDB(data: any) {
-  // Update the in-memory cache immediately synchronously
-  dbCache = data;
+// ─── Seed داده اولیه ──────────────────────────────────────────────────────────
+if (!(db.prepare("SELECT 1 FROM users WHERE username = 'admin'").get())) {
+  db.prepare(`INSERT INTO users (username,full_name,email,phone,password_hash,card_data)
+    VALUES (?,?,?,?,?,?)`)
+    .run("admin","مدیر کل پلتفرم","admin@gmail.com","09121234567",
+      hashPassword("admin"), JSON.stringify(createDefaultCardData("کارت نمونه ادمین")));
+}
+const insertBanner = db.prepare("INSERT OR IGNORE INTO banners (id,image_url,title) VALUES (?,?,?)");
+insertBanner.run("banner1","https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80","کارت ویزیت دیجیتال رایگان خود را بسازید");
+insertBanner.run("banner2","https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=800&q=80","چاپ کارت فیزیکی با برچسب هوشمند NFC");
+insertBanner.run("banner3","https://images.unsplash.com/photo-1600132806370-bf17e65e942f?w=800&q=80","کسب و کار خود را در نقشه گوگل ثبت کنید");
 
-  // Queue writing to disk sequentially in the background
-  writeQueue = writeQueue.then(async () => {
-    try {
-      const tempFile = DB_FILE + ".tmp";
-      const payload = JSON.stringify(data, null, 2);
-      // Write atomically to a temp file first
-      await fs.promises.writeFile(tempFile, payload, "utf8");
-      // Rename is POSIX atomic and completely safe against corrupted partial-writes
-      await fs.promises.rename(tempFile, DB_FILE);
-    } catch (err) {
-      console.error("Error in atomic saveDB write queue:", err);
-    }
+// ─── Helper: کاربر از DB ─────────────────────────────────────────────────────
+function getUser(username: string): any | null {
+  const row = db.prepare("SELECT * FROM users WHERE LOWER(username)=LOWER(?)").get(username) as any;
+  if (!row) return null;
+  return { ...row, isSuspended: !!row.is_suspended, fullName: row.full_name,
+    passwordHash: row.password_hash, qrImageUrl: row.qr_image_url,
+    qrRequestStatus: row.qr_request_status, qrRequestTime: row.qr_request_time,
+    cardData: JSON.parse(row.card_data || "{}") };
+}
+
+// ─── WebSocket Manager ────────────────────────────────────────────────────────
+interface WsClient { ws: WebSocket; ticketId: string | null; username: string; role: "user"|"admin"; }
+const wsClients: WsClient[] = [];
+
+function broadcastToTicket(ticketId: string, payload: object) {
+  const msg = JSON.stringify(payload);
+  wsClients.forEach(c => {
+    if (c.ticketId === ticketId && c.ws.readyState === WebSocket.OPEN) c.ws.send(msg);
+  });
+}
+function notifyAdmin(payload: object) {
+  const msg = JSON.stringify(payload);
+  wsClients.forEach(c => {
+    if (c.role === "admin" && c.ws.readyState === WebSocket.OPEN) c.ws.send(msg);
   });
 }
 
-// Middleware
-app.use(express.json({ limit: "50mb" }));
+// ─── Multer: آپلود فایل روی دیسک ─────────────────────────────────────────────
+const storage = multer.diskStorage({
+  destination: (req: any, file, cb) => {
+    // هر کاربر پوشه خودش رو داره
+    const username = req.username || "general";
+    const userDir  = path.join(UPLOADS_DIR, username);
+    if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
+    cb(null, userDir);
+  },
+  filename: (req, file, cb) => {
+    // نام فایل: timestamp + پسوند اصلی
+    const ext = path.extname(file.originalname).toLowerCase() || ".jpg";
+    cb(null, `${Date.now()}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // حداکثر 5MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ["image/jpeg","image/png","image/webp","image/gif"];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("فقط فایل‌های تصویری مجاز هستند."));
+  },
+});
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
-// Simple Security logs & Rate limit simulator (simple in-memory rate limiter per IP)
+// سرو فایل‌های آپلود شده
+app.use("/uploads", express.static(UPLOADS_DIR));
+
+// Rate limiter
 const rateLimitStore: { [ip: string]: { count: number; resetTime: number } } = {};
+const loginLimitStore: { [ip: string]: { count: number; resetTime: number } } = {};
+
 app.use((req, res, next) => {
-  const ip = req.ip || "unknown";
+  const ip  = req.ip || "unknown";
   const now = Date.now();
-  if (!rateLimitStore[ip]) {
-    rateLimitStore[ip] = { count: 1, resetTime: now + 60 * 1000 };
-  } else {
-    if (now > rateLimitStore[ip].resetTime) {
-      rateLimitStore[ip] = { count: 1, resetTime: now + 60 * 1000 };
-    } else {
-      rateLimitStore[ip].count++;
-    }
-  }
-
-  if (rateLimitStore[ip].count > 500) {
-    return res.status(429).json({ message: "تعداد درخواست های شما بیش از حد مجاز است. لطفا لحظه ای صبر کنید." });
-  }
-
-  // Security Headers Simulation (Helmet simulation)
+  if (!rateLimitStore[ip] || now > rateLimitStore[ip].resetTime)
+    rateLimitStore[ip] = { count: 1, resetTime: now + 60_000 };
+  else rateLimitStore[ip].count++;
+  if (rateLimitStore[ip].count > 300) return res.status(429).json({ message: "تعداد درخواست‌ها بیش از حد مجاز است." });
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("X-XSS-Protection", "1; mode=block");
   next();
 });
 
-// Authentication middleware
+// تأیید توکن
 function verifyToken(req: any, res: any, next: any) {
-  let token = "";
-
-  // 1. Support Authorization header Bearer token (HIGHEST PRIORITY)
-  if (req.headers.authorization) {
-    const parts = req.headers.authorization.split(" ");
-    if (parts.length === 2 && parts[0] === "Bearer") {
-      token = parts[1];
-    }
-  }
-
-  // 2. Support cookie fallback if header not present
-  if (!token && req.cookies && req.cookies.authToken) {
-    token = req.cookies.authToken;
-  }
-
-  // 3. Support alternative authorization token query parameter (optional fallback)
-  if (!token && req.query.token) {
-    token = req.query.token as string;
-  }
-
-  if (!token) {
-    console.log("[Auth] verifyToken failed: No token found");
-    return res.status(410).json({ message: "توکن معتبر یافت نشد. لطفا مجدد وارد شوید." });
-  }
-
+  const token = req.cookies?.authToken || req.headers?.authorization?.replace("Bearer ", "");
+  if (!token) return res.status(410).json({ message: "توکن معتبر یافت نشد." });
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     req.username = decoded.username;
-    console.log(`[Auth] verifyToken success: user=${req.username}`);
     next();
-  } catch (err: any) {
-    console.log("[Auth] verifyToken failed: token invalid:", err.message);
-    return res.status(401).json({ message: "توکن شما منقضی یا نامعتبر شده است." });
-  }
+  } catch { return res.status(401).json({ message: "توکن منقضی یا نامعتبر است." }); }
 }
 
-// Check if username is available (live checking during registration)
-app.get("/api/auth/check-username/:username", (req, res) => {
-  const { username } = req.params;
-  const usernameClean = username.trim().toLowerCase();
+function verifyAdmin(req: any, res: any, next: any) {
+  verifyToken(req, res, () => {
+    if (req.username !== "admin") return res.status(403).json({ message: "دسترسی ادمین لازم است." });
+    next();
+  });
+}
 
-  // Rules: alphanumeric English, >4 and <10 [so 5 to 9 chars]
-  const isAlphaNumeric = /^[a-zA-Z0-9]+$/.test(usernameClean);
-  if (!isAlphaNumeric) {
-    return res.json({ available: false, error: "نام کاربری فقط باید انگلیسی و اعداد باشد" });
-  }
-
-  if (usernameClean.length <= 4 || usernameClean.length >= 10) {
-    return res.json({ available: false, error: "نام کاربری باید بین ۵ تا ۹ کاراکتر باشد" });
-  }
-
-  const db = getDB();
-  const exists = db.users.some((u: any) => u.username.toLowerCase() === usernameClean);
-
-  if (exists) {
-    return res.json({ available: false, error: "این نام کاربری از قبل وجود دارد" });
-  }
-
-  return res.json({ available: true });
+// ─── آپلود تصویر ─────────────────────────────────────────────────────────────
+app.post("/api/upload", verifyToken, upload.single("image"), (req: any, res) => {
+  if (!req.file) return res.status(400).json({ message: "فایلی ارسال نشد." });
+  // URL عمومی فایل
+  const fileUrl = `/uploads/${req.username}/${req.file.filename}`;
+  return res.json({ url: fileUrl });
 });
 
-// Registration API
+// آپلود برای ادمین (QR و بنر)
+app.post("/api/admin/upload", verifyAdmin, upload.single("image"), (req: any, res) => {
+  if (!req.file) return res.status(400).json({ message: "فایلی ارسال نشد." });
+  const fileUrl = `/uploads/admin/${req.file.filename}`;
+  return res.json({ url: fileUrl });
+});
+
+// ─── Auth Routes ──────────────────────────────────────────────────────────────
+app.get("/api/auth/check-username/:username", (req, res) => {
+  const u = req.params.username.trim().toLowerCase();
+  if (!/^[a-zA-Z0-9]+$/.test(u)) return res.json({ available: false, error: "فقط حروف انگلیسی و اعداد مجاز است" });
+  if (u.length < 3 || u.length > 30) return res.json({ available: false, error: "بین ۳ تا ۳۰ کاراکتر" });
+  const exists = db.prepare("SELECT 1 FROM users WHERE LOWER(username)=?").get(u);
+  return res.json(exists ? { available: false, error: "این نام کاربری قبلاً ثبت شده" } : { available: true });
+});
+
 app.post("/api/auth/register", (req, res) => {
   const { fullName, username, email, phone, password, confirmPassword } = req.body;
-
-  if (!fullName || !username || !email || !phone || !password || !confirmPassword) {
-    return res.status(400).json({ message: "لطفاتمامی فیلدها را وارد نمایید." });
+  if (!fullName || !username || !email || !phone || !password || !confirmPassword)
+    return res.status(400).json({ message: "لطفا تمامی فیلدها را وارد نمایید." });
+  const u = username.trim().toLowerCase();
+  if (u.length < 3 || u.length > 30)  return res.status(400).json({ message: "نام کاربری باید ۳ تا ۳۰ کاراکتر باشد." });
+  if (!/^[a-zA-Z0-9]+$/.test(u))      return res.status(400).json({ message: "نام کاربری فقط حروف انگلیسی و اعداد." });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ message: "فرمت ایمیل صحیح نیست." });
+  if (!/^09\d{9}$/.test(phone))        return res.status(400).json({ message: "شماره همراه باید ۱۱ رقم با 09 شروع شود." });
+  if (password.length < 8)             return res.status(400).json({ message: "رمز عبور حداقل ۸ کاراکتر باشد." });
+  if (password !== confirmPassword)    return res.status(400).json({ message: "رمز عبور با تکرار آن مطابقت ندارد." });
+  try {
+    db.prepare(`INSERT INTO users (username,full_name,email,phone,password_hash,card_data) VALUES (?,?,?,?,?,?)`)
+      .run(u, fullName, email.trim(), phone.trim(), hashPassword(password), JSON.stringify(createDefaultCardData(fullName)));
+  } catch (err: any) {
+    if (err.message?.includes("UNIQUE")) {
+      if (err.message.includes("email")) return res.status(400).json({ message: "این ایمیل قبلاً ثبت شده." });
+      if (err.message.includes("phone")) return res.status(400).json({ message: "این شماره قبلاً ثبت شده." });
+      return res.status(400).json({ message: "نام کاربری تکراری است." });
+    }
+    return res.status(500).json({ message: "خطای سرور." });
   }
-
-  const usernameClean = username.trim().toLowerCase();
-
-  // Validate username length (> 4 and < 10)
-  if (usernameClean.length <= 4 || usernameClean.length >= 10) {
-    return res.status(400).json({ message: "نام کاربری باید بین ۵ تا ۹ کاراکتر باشد." });
-  }
-
-  if (!/^[a-zA-Z0-9]+$/.test(usernameClean)) {
-    return res.status(400).json({ message: "نام کاربری فقط باید شامل حروف انگلیسی و اعداد باشد." });
-  }
-
-  // Email format check - must end with @gmail.com
-  if (!email.endsWith("@gmail.com")) {
-    return res.status(400).json({ message: "ایمیل شما باید با @gmail.com خاتمه یابد." });
-  }
-
-  // Phone starts with 09 and is 11 digits
-  if (!/^09\d{9}$/.test(phone)) {
-    return res.status(400).json({ message: "شماره همراه باید با 09 آغاز شده و ۱۱ رقم باشد." });
-  }
-
-  if (password !== confirmPassword) {
-    return res.status(400).json({ message: "رمز عبور با تکرار آن مطابقت ندارد." });
-  }
-
-  const db = getDB();
-
-  // Uniqueness check
-  if (db.users.some((u: any) => u.username.toLowerCase() === usernameClean)) {
-    return res.status(400).json({ message: "نام کاربری تکراری است." });
-  }
-
-  if (db.users.some((u: any) => u.email.toLowerCase() === email.toLowerCase())) {
-    return res.status(400).json({ message: "حسابی با این ایمیل هم اکنون ثبت نام شده است." });
-  }
-
-  if (db.users.some((u: any) => u.phone === phone)) {
-    return res.status(400).json({ message: "این شماره همراه قبلا در وبسایت ثبت شده است." });
-  }
-
-  // Create clean user card details
-  const newUser = {
-    fullName,
-    username: usernameClean,
-    email,
-    phone,
-    passwordHash: hashPassword(password), // Store secure PBKDF2 hashed password
-    isSuspended: false,
-    qrImageUrl: "",
-    qrRequestStatus: "none",
-    qrRequestTime: "",
-    cardData: createDefaultCardData(fullName),
-  };
-
-  db.users.push(newUser);
-  saveDB(db);
-
-  // Auto-login with token
-  const token = jwt.sign({ username: usernameClean }, JWT_SECRET, { expiresIn: "1d" });
-  res.cookie("authToken", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/", // Explicit path scopes it site-wide, preventing sub-route omission
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
-  });
-
-  return res.json({ message: "ثبت نام با موفقیت انجام شد.", token, user: { fullName, username: usernameClean, email, phone, isSuspended: false } });
+  const token = jwt.sign({ username: u }, JWT_SECRET, { expiresIn: "1d" });
+  res.cookie("authToken", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "none", path: "/", maxAge: 86_400_000 });
+  return res.json({ message: "ثبت‌نام موفق.", token, user: { fullName, username: u, email, phone, isSuspended: false } });
 });
 
-// Login API (Dual entry: email or phone number)
 app.post("/api/auth/login", (req, res) => {
+  // rate limit جداگانه برای login
+  const ip  = req.ip || "unknown";
+  const now = Date.now();
+  if (!loginLimitStore[ip] || now > loginLimitStore[ip].resetTime)
+    loginLimitStore[ip] = { count: 1, resetTime: now + 60_000 };
+  else loginLimitStore[ip].count++;
+  if (loginLimitStore[ip].count > 10)
+    return res.status(429).json({ message: "تعداد تلاش‌های ورود بیش از حد است. یک دقیقه صبر کنید." });
+
   const { loginId, password } = req.body;
+  if (!loginId || !password) return res.status(400).json({ message: "شناسه کاربری و رمز عبور الزامی است." });
+  const id   = loginId.trim().toLowerCase();
+  const user = db.prepare("SELECT * FROM users WHERE LOWER(email)=? OR phone=? OR LOWER(username)=?")
+    .get(id, id, id) as any;
+  if (!user || !verifyPassword(password, user.password_hash))
+    return res.status(400).json({ message: "شناسه یا رمز عبور اشتباه است." });
+  if (user.is_suspended)
+    return res.status(403).json({ message: "حساب شما تعلیق شده است.", isSuspended: true });
+  // ارتقاء رمز قدیمی
+  if (!user.password_hash.startsWith("pbkdf2$"))
+    db.prepare("UPDATE users SET password_hash=? WHERE username=?").run(hashPassword(password), user.username);
 
-  if (!loginId || !password) {
-    return res.status(400).json({ message: "لطفا شناسه کاربری (ایمیل یا شماره همراه) و رمز عبور را وارد کنید." });
-  }
-
-  const db = getDB();
-  const idClean = loginId.trim().toLowerCase();
-
-  const user = db.users.find(
-    (u: any) =>
-      u.email.toLowerCase() === idClean ||
-      u.phone === idClean ||
-      u.username.toLowerCase() === idClean
-  );
-
-  // Secure PBKDF2 timing-safe comparison
-  if (!user || !verifyPassword(password, user.passwordHash)) {
-    return res.status(400).json({ message: "شناسه کاربری یا رمز عبور اشتباه است." });
-  }
-
-  // Seamlessly upgrade legacy plain text passwords on successful login
-  if (!user.passwordHash.startsWith("pbkdf2$")) {
-    user.passwordHash = hashPassword(password);
-    saveDB(db);
-  }
-
-  // Generate sessions
   const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: "10d" });
-  res.cookie("authToken", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/", // Explicit path scopes it site-wide
-    maxAge: 10 * 24 * 60 * 60 * 1000 // 10 days
-  });
-
+  res.cookie("authToken", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "none", path: "/", maxAge: 864_000_000 });
   return res.json({
-    message: "ورود موفقیت‌آمیز بود.",
-    token, // Return token specifically for header fallback
-    user: {
-      fullName: user.fullName,
-      username: user.username,
-      email: user.email,
-      phone: user.phone,
-      isSuspended: user.isSuspended,
-      qrRequestStatus: user.qrRequestStatus,
-      qrImageUrl: user.qrImageUrl
-    }
+    message: "ورود موفق.", token,
+    user: { fullName: user.full_name, username: user.username, email: user.email,
+      phone: user.phone, isSuspended: false, qrRequestStatus: user.qr_request_status, qrImageUrl: user.qr_image_url },
   });
 });
 
-// Logout API
 app.post("/api/auth/logout", (req, res) => {
-  res.clearCookie("authToken", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/" // Clear across whole site
-  });
-  return res.json({ message: "خروج موفقیت آمیز" });
+  res.clearCookie("authToken", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "none", path: "/" });
+  return res.json({ message: "خروج موفق." });
 });
 
-// Me API (To retrieve current session and verify credentials)
 app.get("/api/auth/me", (req, res) => {
-  let token = "";
-
-  // 1. Support Authorization header Bearer token (HIGHEST PRIORITY)
-  if (req.headers.authorization) {
-    const parts = req.headers.authorization.split(" ");
-    if (parts.length === 2 && parts[0] === "Bearer") {
-      token = parts[1];
-    }
-  }
-
-  // 2. Support cookie fallback if header not present
-  if (!token && req.cookies && req.cookies.authToken) {
-    token = req.cookies.authToken;
-  }
-
-  // 3. Support alternative authorization token query parameter (optional fallback)
-  if (!token && req.query.token) {
-    token = req.query.token as string;
-  }
-
-  if (!token) {
-    return res.status(401).json({ loggedIn: false });
-  }
-
+  const token = req.cookies?.authToken || req.headers?.authorization?.replace("Bearer ", "");
+  if (!token) return res.status(401).json({ loggedIn: false });
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const db = getDB();
-    const user = db.users.find((u: any) => u.username === decoded.username);
-
-    if (!user) {
-      return res.status(401).json({ loggedIn: false });
-    }
-
-    // Refresh token
-    const newToken = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: "10d" });
-
+    const user    = db.prepare("SELECT * FROM users WHERE username=?").get(decoded.username) as any;
+    if (!user) return res.status(401).json({ loggedIn: false });
     return res.json({
-      loggedIn: true,
-      token: newToken,
-      user: {
-        fullName: user.fullName,
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        isSuspended: user.isSuspended,
-        qrRequestStatus: user.qrRequestStatus,
-        qrImageUrl: user.qrImageUrl
-      }
+      loggedIn: true, token,
+      user: { fullName: user.full_name, username: user.username, email: user.email,
+        phone: user.phone, isSuspended: !!user.is_suspended,
+        qrRequestStatus: user.qr_request_status, qrImageUrl: user.qr_image_url },
     });
-  } catch (err: any) {
-    res.clearCookie("authToken", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      path: "/" // Clean session completely on error
-    });
+  } catch {
+    res.clearCookie("authToken");
     return res.status(401).json({ loggedIn: false });
   }
 });
 
-// Forgot & Reset Password API
 app.post("/api/auth/reset-password", (req, res) => {
   const { email, phone, username, newPassword } = req.body;
-
-  if (!email || !phone || !username || !newPassword) {
-    return res.status(400).json({ message: "لطفاتمامی فیلدها را جهت تایید هویت وارد کنید." });
-  }
-
-  const db = getDB();
-  const userIndex = db.users.findIndex(
-    (u: any) =>
-      u.username.toLowerCase() === username.trim().toLowerCase() &&
-      u.email.toLowerCase() === email.trim().toLowerCase() &&
-      u.phone === phone.trim()
-  );
-
-  if (userIndex === -1) {
-    return res.status(400).json({ message: "مشخصات وارد شده همخوانی ندارد. لطفا مجدد تلاش بفرمایید." });
-  }
-
-  db.users[userIndex].passwordHash = hashPassword(newPassword); // Secure reset hashing
-  saveDB(db);
-
-  return res.json({ message: "رمز عبور با موفقیت بازنشانی شد. هم اکنون می توانید وارد شوید." });
+  if (!email || !phone || !username || !newPassword)
+    return res.status(400).json({ message: "لطفا تمامی فیلدها را وارد کنید." });
+  if (newPassword.length < 8) return res.status(400).json({ message: "رمز جدید حداقل ۸ کاراکتر." });
+  const user = db.prepare("SELECT * FROM users WHERE LOWER(username)=? AND LOWER(email)=? AND phone=?")
+    .get(username.trim().toLowerCase(), email.trim().toLowerCase(), phone.trim()) as any;
+  if (!user) return res.status(400).json({ message: "مشخصات وارد شده همخوانی ندارد." });
+  db.prepare("UPDATE users SET password_hash=? WHERE username=?").run(hashPassword(newPassword), user.username);
+  return res.json({ message: "رمز عبور با موفقیت بازنشانی شد." });
 });
 
-// Public Card data fetch + stats counter
+// ─── Card Routes ──────────────────────────────────────────────────────────────
 app.get("/api/card/:username", (req, res) => {
-  const { username } = req.params;
-  const source = req.query.source || "link"; // 'scan' or 'link'
+  const source = (req.query.source as string) || "link";
+  const user   = getUser(req.params.username);
+  if (!user) return res.status(404).json({ message: "کارت ویزیت یافت نشد." });
+  if (user.isSuspended) return res.status(403).json({ message: "این کارت به دلیل تعلیق حساب غیرفعال است.", isSuspended: true });
 
-  const db = getDB();
-  const user = db.users.find((u: any) => u.username.toLowerCase() === username.toLowerCase());
+  const cardData = user.cardData;
+  if (!cardData.stats) cardData.stats = { totalVisits: 0, scans: 0, linkOpens: 0, buttonClicks: 0, dailyVisits: {} };
 
-  if (!user) {
-    return res.status(404).json({ message: "کارت ویزیت مورد نظر یافت نشد." });
-  }
+  cardData.stats.totalVisits++;
+  source === "scan" ? cardData.stats.scans++ : cardData.stats.linkOpens++;
 
-  if (user.isSuspended) {
-    return res.status(403).json({ message: "این کارت ویزیت به دلیل تعلیق موقت فعالیت حساب، غیرفعال می باشد.", isSuspended: true });
-  }
-
-  // Increment metrics
-  if (!user.cardData.stats) {
-    user.cardData.stats = { totalVisits: 0, scans: 0, linkOpens: 0, buttonClicks: 0, dailyVisits: {} };
-  }
-
-  user.cardData.stats.totalVisits += 1;
-  if (source === "scan") {
-    user.cardData.stats.scans += 1;
-  } else {
-    user.cardData.stats.linkOpens += 1;
-  }
-
-  // Manage daily chart visits for last 7 days dynamically
   const today = getJalaliDate(new Date());
-  if (!user.cardData.stats.dailyVisits) {
-    user.cardData.stats.dailyVisits = {};
-  }
-  user.cardData.stats.dailyVisits[today] = (user.cardData.stats.dailyVisits[today] || 0) + 1;
+  cardData.stats.dailyVisits[today] = (cardData.stats.dailyVisits[today] || 0) + 1;
+  // نگه‌داری فقط ۳۰ روز اخیر
+  const keys = Object.keys(cardData.stats.dailyVisits);
+  if (keys.length > 30) keys.slice(0, keys.length - 30).forEach(k => delete cardData.stats.dailyVisits[k]);
 
-  saveDB(db);
-
-  return res.json({
-    fullName: user.fullName,
-    username: user.username,
-    cardData: user.cardData
-  });
+  db.prepare("UPDATE users SET card_data=? WHERE username=?").run(JSON.stringify(cardData), user.username);
+  return res.json({ fullName: user.fullName, username: user.username, cardData });
 });
 
-// Click count tracker
 app.post("/api/card/:username/click", (req, res) => {
-  const { username } = req.params;
-  const db = getDB();
-  const user = db.users.find((u: any) => u.username.toLowerCase() === username.toLowerCase());
-
-  if (!user) {
-    return res.status(404).json({ message: "کاربر یافت نشد." });
-  }
-
-  user.cardData.stats.buttonClicks += 1;
-  saveDB(db);
-  return res.json({ success: true, count: user.cardData.stats.buttonClicks });
+  const user = getUser(req.params.username);
+  if (!user) return res.status(404).json({ message: "کاربر یافت نشد." });
+  const cd = user.cardData;
+  cd.stats.buttonClicks = (cd.stats.buttonClicks || 0) + 1;
+  db.prepare("UPDATE users SET card_data=? WHERE username=?").run(JSON.stringify(cd), user.username);
+  return res.json({ success: true });
 });
 
-// Get card data for owner (no visitors metric increment)
 app.get("/api/user/card/:username", verifyToken, (req: any, res) => {
-  const { username } = req.params;
-  if (req.username !== username && req.username !== "admin") {
-    return res.status(403).json({ message: "عدم دسترسی به پنل مدیریت کارت." });
-  }
-
-  const db = getDB();
-  const user = db.users.find((u: any) => u.username.toLowerCase() === username.toLowerCase());
-
-  if (!user) {
-    return res.status(404).json({ message: "کاربر مورد نظر یافت نشد." });
-  }
-
+  if (req.username !== req.params.username && req.username !== "admin")
+    return res.status(403).json({ message: "دسترسی غیرمجاز." });
+  const user = getUser(req.params.username);
+  if (!user) return res.status(404).json({ message: "کاربر یافت نشد." });
   return res.json(user.cardData);
 });
 
-// Save updated Card Data
 app.post("/api/user/card/:username", verifyToken, (req: any, res) => {
-  const { username } = req.params;
-  if (req.username !== username && req.username !== "admin") {
-    return res.status(403).json({ message: "عدم دسترسی به پنل مدیریت کارت." });
-  }
-
-  const db = getDB();
-  const userIndex = db.users.findIndex((u: any) => u.username.toLowerCase() === username.toLowerCase());
-
-  if (userIndex === -1) {
-    return res.status(404).json({ message: "کاربر یافت نشد." });
-  }
-
-  const currentStats = db.users[userIndex].cardData.stats;
-  // Deep save, preserving existing stats
-  db.users[userIndex].cardData = {
-    ...req.body,
-    stats: currentStats // lock stats
-  };
-
-  saveDB(db);
-  return res.json({ message: "اطلاعات کارت با موفقیت ذخیره شد.", cardData: db.users[userIndex].cardData });
+  if (req.username !== req.params.username && req.username !== "admin")
+    return res.status(403).json({ message: "دسترسی غیرمجاز." });
+  const user = getUser(req.params.username);
+  if (!user) return res.status(404).json({ message: "کاربر یافت نشد." });
+  // آمار قفل می‌شه — کاربر نمی‌تونه دستکاری کنه
+  const newCardData = { ...req.body, stats: user.cardData.stats };
+  db.prepare("UPDATE users SET card_data=? WHERE LOWER(username)=LOWER(?)")
+    .run(JSON.stringify(newCardData), req.params.username);
+  return res.json({ message: "کارت با موفقیت ذخیره شد.", cardData: newCardData });
 });
 
-// QR Code activation system
+// ─── QR ───────────────────────────────────────────────────────────────────────
 app.post("/api/user/:username/qr-request", verifyToken, (req: any, res) => {
-  const { username } = req.params;
-  if (req.username !== username) {
-    return res.status(403).json({ message: "عدم دسترسی" });
-  }
-
-  const db = getDB();
-  const userIndex = db.users.findIndex((u: any) => u.username.toLowerCase() === username.toLowerCase());
-
-  if (userIndex === -1) {
-    return res.status(404).json({ message: "کاربر یافت نشد." });
-  }
-
-  db.users[userIndex].qrRequestStatus = "pending";
-  db.users[userIndex].qrRequestTime = new Date().toLocaleString("fa-IR");
-  saveDB(db);
-
-  return res.json({ message: "درخواست فعالسازی و طراحی کارت فیزیکی با موفقیت ثبت شد." });
+  if (req.username !== req.params.username) return res.status(403).json({ message: "دسترسی غیرمجاز." });
+  const result = db.prepare("UPDATE users SET qr_request_status='pending', qr_request_time=? WHERE LOWER(username)=LOWER(?)")
+    .run(new Date().toLocaleString("fa-IR"), req.params.username);
+  if (!result.changes) return res.status(404).json({ message: "کاربر یافت نشد." });
+  return res.json({ message: "درخواست کارت فیزیکی ثبت شد." });
 });
 
-// Single User - Get my tickets
+// ─── Ticket Routes ────────────────────────────────────────────────────────────
 app.get("/api/user/:username/tickets", verifyToken, (req: any, res) => {
-  const { username } = req.params;
-  if (req.username !== username && req.username !== "admin") {
-    return res.status(403).json({ message: "دسترسی غیرمجاز" });
-  }
-
-  const db = getDB();
-  const userTickets = db.tickets.filter((t: any) => t.username.toLowerCase() === username.toLowerCase());
-  return res.json(userTickets);
+  if (req.username !== req.params.username && req.username !== "admin")
+    return res.status(403).json({ message: "دسترسی غیرمجاز." });
+  const rows = db.prepare("SELECT * FROM tickets WHERE LOWER(username)=LOWER(?) ORDER BY created_at DESC")
+    .all(req.params.username) as any[];
+  return res.json(rows.map(t => ({ ...t, userFullName: t.user_fullname, createdAt: t.created_at, messages: JSON.parse(t.messages) })));
 });
 
-// Create ticket
 app.post("/api/user/:username/tickets", verifyToken, (req: any, res) => {
   const { username } = req.params;
   const { title, description } = req.body;
-
-  if (req.username !== username) {
-    return res.status(403).json({ message: "دسترسی غیرمجاز" });
-  }
-
-  if (!title || !description) {
-    return res.status(400).json({ message: "لطفاتمامی فیلدها را وارد نمایید." });
-  }
-
-  const db = getDB();
-  const user = db.users.find((u: any) => u.username === username);
-
+  if (req.username !== username) return res.status(403).json({ message: "دسترسی غیرمجاز." });
+  if (!title || !description) return res.status(400).json({ message: "عنوان و توضیحات الزامی است." });
+  const user = db.prepare("SELECT full_name FROM users WHERE username=?").get(username) as any;
+  const now  = new Date();
   const newTicket = {
-    id: "ticket-" + Date.now(),
-    username,
-    userFullName: user ? user.fullName : "کاربر",
-    title,
-    description,
-    status: "read", // 'read', 'under_review', 'ended'
-    createdAt: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }) + " - " + new Date().toLocaleDateString("fa-IR"),
-    messages: [
-      {
-        id: "msg-1",
-        sender: "user",
-        message: description,
-        createdAt: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" })
-      }
-    ]
+    id: "ticket-" + Date.now(), username,
+    user_fullname: user?.full_name || "کاربر",
+    title, description, status: "pending",
+    created_at: now.toLocaleDateString("fa-IR") + " - " + now.toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }),
+    messages: JSON.stringify([{ id: "msg-1", sender: "user", message: description,
+      createdAt: now.toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }) }]),
   };
-
-  db.tickets.push(newTicket);
-  saveDB(db);
-
-  return res.json({ message: "تیکت با موفقیت ثبت شد.", ticket: newTicket });
+  db.prepare("INSERT INTO tickets (id,username,user_fullname,title,description,status,created_at,messages) VALUES (?,?,?,?,?,?,?,?)")
+    .run(newTicket.id, newTicket.username, newTicket.user_fullname, newTicket.title,
+      newTicket.description, newTicket.status, newTicket.created_at, newTicket.messages);
+  const ticket = { ...newTicket, userFullName: newTicket.user_fullname, createdAt: newTicket.created_at, messages: JSON.parse(newTicket.messages) };
+  notifyAdmin({ type: "new_ticket", ticket });
+  return res.json({ message: "تیکت ثبت شد.", ticket });
 });
 
-// Add message to ticket
 app.post("/api/user/:username/tickets/:ticketId/messages", verifyToken, (req: any, res) => {
   const { username, ticketId } = req.params;
-  const { message, sender } = req.body; // sender: 'user' or 'support'
+  const { message } = req.body;
+  if (req.username !== username && req.username !== "admin")
+    return res.status(403).json({ message: "دسترسی غیرمجاز." });
+  const ticket = db.prepare("SELECT * FROM tickets WHERE id=?").get(ticketId) as any;
+  if (!ticket) return res.status(404).json({ message: "تیکت یافت نشد." });
+  if (ticket.status === "ended") return res.status(400).json({ message: "این تیکت بسته شده." });
 
-  if (req.username !== username && req.username !== "admin") {
-    return res.status(403).json({ message: "دسترسی غیرمجاز" });
-  }
+  const messages = JSON.parse(ticket.messages);
+  const newMsg   = { id: "msg-" + Date.now(),
+    sender: req.username === "admin" ? "support" : "user", message,
+    createdAt: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }) };
+  messages.push(newMsg);
+  const newStatus = req.username !== "admin" ? "under_review" : ticket.status;
+  db.prepare("UPDATE tickets SET messages=?, status=? WHERE id=?").run(JSON.stringify(messages), newStatus, ticketId);
 
-  const db = getDB();
-  const ticketIndex = db.tickets.findIndex((t: any) => t.id === ticketId);
-
-  if (ticketIndex === -1) {
-    return res.status(404).json({ message: "تیکت یافت نشد." });
-  }
-
-  if (db.tickets[ticketIndex].status === "ended") {
-    return res.status(400).json({ message: "این تیکت بسته شده است و امکان ارسال پیام وجود ندارد." });
-  }
-
-  const newMsg = {
-    id: "msg-" + Date.now(),
-    sender: req.username === "admin" ? "support" : "user",
-    message,
-    createdAt: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" })
-  };
-
-  db.tickets[ticketIndex].messages.push(newMsg);
-  // Auto mark as active / under review if user writes, or support writes
-  if (req.username !== "admin") {
-    db.tickets[ticketIndex].status = "under_review";
-  }
-  
-  saveDB(db);
-
-  // ─── WebSocket broadcast ───────────────────────────────────────────────────
-  // پیام جدید رو به همه کسایی که این تیکت رو باز دارن می‌فرستیم
-  broadcastToTicket(ticketId, {
-    type: "new_message",
-    ticketId,
-    message: newMsg,
-    newStatus: db.tickets[ticketIndex].status,
-  });
-
-  // به ادمین هم اطلاع می‌دیم (اگه تیکت رو باز نداشت، نوتیف بگیره)
-  notifyAdmin({
-    type: "ticket_updated",
-    ticketId,
-    username,
-    newStatus: db.tickets[ticketIndex].status,
-  });
-
+  broadcastToTicket(ticketId, { type: "new_message", ticketId, message: newMsg, newStatus });
+  notifyAdmin({ type: "ticket_updated", ticketId, username, newStatus });
   return res.json(newMsg);
 });
 
-// ====== ADMIN ROUTERS ======
-
-// Check admin role
-function verifyAdmin(req: any, res: any, next: any) {
-  verifyToken(req, res, () => {
-    if (req.username !== "admin") {
-      console.log(`[Auth Admin] Access Denied: User is ${req.username}, expected admin`);
-      return res.status(403).json({ message: "شما دسترسی به پنل مدیریت را ندارید." });
-    }
-    console.log(`[Auth Admin] Access Granted for admin`);
-    next();
-  });
-}
-
-// Get admin stats
+// ─── Admin Routes ─────────────────────────────────────────────────────────────
 app.get("/api/admin/stats", verifyAdmin, (req, res) => {
-  const db = getDB();
-  const safeUsers = db.users || [];
-  const totalCustomers = safeUsers.filter((u: any) => u.username !== "admin").length;
-  const cardsWithQr = safeUsers.filter((u: any) => u.qrRequestStatus === "approved").length;
-  const totalVisits = safeUsers.reduce((acc: number, u: any) => acc + (u.cardData?.stats?.totalVisits || 0), 0);
-
-  return res.json({
-    totalCustomers,
-    cardsWithQr,
-    totalVisits
-  });
+  const totalCustomers = (db.prepare("SELECT COUNT(*) as c FROM users WHERE username!='admin'").get() as any).c;
+  const cardsWithQr    = (db.prepare("SELECT COUNT(*) as c FROM users WHERE qr_request_status='approved'").get() as any).c;
+  const rows           = db.prepare("SELECT card_data FROM users").all() as any[];
+  const totalVisits    = rows.reduce((acc, r) => acc + (JSON.parse(r.card_data)?.stats?.totalVisits || 0), 0);
+  return res.json({ totalCustomers, cardsWithQr, totalVisits });
 });
 
-// Admin- Get users list
 app.get("/api/admin/users", verifyAdmin, (req, res) => {
-  const db = getDB();
-  // Filter admin from editable accounts list
-  const clientUsers = (db.users || []).filter((u: any) => u.username !== "admin");
-  return res.json(clientUsers);
+  const rows = db.prepare("SELECT * FROM users WHERE username!='admin'").all() as any[];
+  return res.json(rows.map(r => ({
+    fullName: r.full_name, username: r.username, email: r.email, phone: r.phone,
+    isSuspended: !!r.is_suspended, qrRequestStatus: r.qr_request_status,
+    qrImageUrl: r.qr_image_url, qrRequestTime: r.qr_request_time,
+    cardData: JSON.parse(r.card_data),
+  })));
 });
 
-// Admin- Edit User details
 app.post("/api/admin/users/:username/edit", verifyAdmin, (req, res) => {
-  const { username } = req.params;
   const { fullName, email, phone, password } = req.body;
-
-  const db = getDB();
-  const userIdx = db.users.findIndex((u: any) => u.username.toLowerCase() === username.toLowerCase());
-
-  if (userIdx === -1) {
-    return res.status(404).json({ message: "کاربر یافت نشد." });
-  }
-
-  // Update
-  db.users[userIdx].fullName = fullName;
-  db.users[userIdx].email = email;
-  db.users[userIdx].phone = phone;
-  if (password) {
-    db.users[userIdx].passwordHash = hashPassword(password);
-  }
-
-  saveDB(db);
-  return res.json({ message: "مشخصات کاربر با موفقیت ویرایش گردید." });
+  const result = db.prepare("UPDATE users SET full_name=?,email=?,phone=? WHERE LOWER(username)=LOWER(?)")
+    .run(fullName, email, phone, req.params.username);
+  if (!result.changes) return res.status(404).json({ message: "کاربر یافت نشد." });
+  if (password) db.prepare("UPDATE users SET password_hash=? WHERE LOWER(username)=LOWER(?)").run(hashPassword(password), req.params.username);
+  return res.json({ message: "مشخصات کاربر ویرایش شد." });
 });
 
-// Admin- Force toggle suspend status
 app.post("/api/admin/users/:username/toggle-suspend", verifyAdmin, (req, res) => {
-  const { username } = req.params;
-  const db = getDB();
-  const userIdx = db.users.findIndex((u: any) => u.username.toLowerCase() === username.toLowerCase());
-
-  if (userIdx === -1) {
-    return res.status(404).json({ message: "کاربر یافت نشد." });
-  }
-
-  db.users[userIdx].isSuspended = !db.users[userIdx].isSuspended;
-  saveDB(db);
-
-  return res.json({
-    message: db.users[userIdx].isSuspended ? "کاربر تعلیق شد." : "تعلیق کاربر برطرف گردید.",
-    isSuspended: db.users[userIdx].isSuspended
-  });
+  const row = db.prepare("SELECT is_suspended FROM users WHERE LOWER(username)=LOWER(?)").get(req.params.username) as any;
+  if (!row) return res.status(404).json({ message: "کاربر یافت نشد." });
+  const newStatus = row.is_suspended ? 0 : 1;
+  db.prepare("UPDATE users SET is_suspended=? WHERE LOWER(username)=LOWER(?)").run(newStatus, req.params.username);
+  return res.json({ message: newStatus ? "کاربر تعلیق شد." : "تعلیق برطرف شد.", isSuspended: !!newStatus });
 });
 
-// Admin- Reset User Card to fresh default
 app.post("/api/admin/users/:username/reset", verifyAdmin, (req, res) => {
-  const { username } = req.params;
-  const db = getDB();
-  const userIdx = db.users.findIndex((u: any) => u.username.toLowerCase() === username.toLowerCase());
-
-  if (userIdx === -1) {
-    return res.status(404).json({ message: "کاربر یافت نشد." });
-  }
-
-  db.users[userIdx].cardData = createDefaultCardData(db.users[userIdx].fullName);
-  saveDB(db);
-
-  return res.json({ message: "کارت ویزیت کاربر ریست شد و به حالت خام اولیه بازگشت." });
+  const row = db.prepare("SELECT full_name FROM users WHERE LOWER(username)=LOWER(?)").get(req.params.username) as any;
+  if (!row) return res.status(404).json({ message: "کاربر یافت نشد." });
+  db.prepare("UPDATE users SET card_data=? WHERE LOWER(username)=LOWER(?)")
+    .run(JSON.stringify(createDefaultCardData(row.full_name)), req.params.username);
+  return res.json({ message: "کارت ویزیت کاربر ریست شد." });
 });
 
-// Admin- Completely delete user account
 app.post("/api/admin/users/:username/delete", verifyAdmin, (req, res) => {
-  const { username } = req.params;
-  const db = getDB();
-  const userIdx = db.users.findIndex((u: any) => u.username.toLowerCase() === username.toLowerCase());
-
-  if (userIdx === -1) {
-    return res.status(404).json({ message: "کاربر یافت نشد." });
-  }
-
-  // Remove
-  db.users.splice(userIdx, 1);
-  saveDB(db);
-
-  return res.json({ message: "حساب کاربر به همراه کلیه اطلاعات فورا حذف گردید." });
+  // حذف فایل‌های آپلود شده کاربر
+  const userUploads = path.join(UPLOADS_DIR, req.params.username);
+  if (fs.existsSync(userUploads)) fs.rmSync(userUploads, { recursive: true });
+  const result = db.prepare("DELETE FROM users WHERE LOWER(username)=LOWER(?) AND username!='admin'").run(req.params.username);
+  if (!result.changes) return res.status(404).json({ message: "کاربر یافت نشد." });
+  return res.json({ message: "حساب کاربر حذف شد." });
 });
 
-// Admin- Auto login bypass (Gets direct signed token for user dashboard)
 app.post("/api/admin/users/:username/bypass-login", verifyAdmin, (req, res) => {
-  const { username } = req.params;
-  const db = getDB();
-  const user = db.users.find((u: any) => u.username.toLowerCase() === username.toLowerCase());
-
-  if (!user) {
-    return res.status(404).json({ message: "کاربر یافت نشد." });
-  }
-
-  // Sign direct token to cookies
-  const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: "10d" });
-  res.cookie("authToken", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/",
-    maxAge: 10 * 24 * 60 * 60 * 1000
-  });
-
-  return res.json({ success: true, token, username: user.username });
+  const row = db.prepare("SELECT username FROM users WHERE LOWER(username)=LOWER(?)").get(req.params.username) as any;
+  if (!row) return res.status(404).json({ message: "کاربر یافت نشد." });
+  const token = jwt.sign({ username: row.username }, JWT_SECRET, { expiresIn: "10d" });
+  res.cookie("authToken", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "none", path: "/", maxAge: 864_000_000 });
+  return res.json({ success: true, token, username: row.username });
 });
 
-// Admin- Get QR Requests
 app.get("/api/admin/qr-requests", verifyAdmin, (req, res) => {
-  const db = getDB();
-  // Get users who requested QR code
-  const requests = (db.users || [])
-    .filter((u: any) => u.qrRequestStatus !== "none")
-    .map((u: any) => ({
-      fullName: u.fullName,
-      username: u.username,
-      qrRequestStatus: u.qrRequestStatus,
-      qrImageUrl: u.qrImageUrl,
-      qrRequestTime: u.qrRequestTime || "ثبت نشده"
-    }));
-  return res.json(requests);
+  const rows = db.prepare("SELECT full_name,username,qr_request_status,qr_image_url,qr_request_time FROM users WHERE qr_request_status!='none'").all() as any[];
+  return res.json(rows.map(r => ({ fullName: r.full_name, username: r.username,
+    qrRequestStatus: r.qr_request_status, qrImageUrl: r.qr_image_url, qrRequestTime: r.qr_request_time || "ثبت نشده" })));
 });
 
-// Admin- Approve QR Code request and upload final QR image (represented by base64)
 app.post("/api/admin/qr-requests/:username/approve", verifyAdmin, (req, res) => {
-  const { username } = req.params;
   const { qrImageUrl } = req.body;
-
-  if (!qrImageUrl) {
-    return res.status(400).json({ message: "آدرس یا تصویر کیوآرکد الزامی است." });
-  }
-
-  const db = getDB();
-  const userIdx = db.users.findIndex((u: any) => u.username.toLowerCase() === username.toLowerCase());
-
-  if (userIdx === -1) {
-    return res.status(404).json({ message: "کاربر یافت نشد." });
-  }
-
-  db.users[userIdx].qrRequestStatus = "approved";
-  db.users[userIdx].qrImageUrl = qrImageUrl;
-  saveDB(db);
-
-  return res.json({ message: "کیوآرکد کاربر با موفقیت تایید و بارگذاری گردید." });
+  if (!qrImageUrl) return res.status(400).json({ message: "آدرس QR الزامی است." });
+  const result = db.prepare("UPDATE users SET qr_request_status='approved',qr_image_url=? WHERE LOWER(username)=LOWER(?)")
+    .run(qrImageUrl, req.params.username);
+  if (!result.changes) return res.status(404).json({ message: "کاربر یافت نشد." });
+  return res.json({ message: "QR کاربر تأیید شد." });
 });
 
-// Admin- View all tickets
 app.get("/api/admin/tickets", verifyAdmin, (req, res) => {
-  const db = getDB();
-  return res.json(db.tickets || []);
+  const rows = db.prepare("SELECT * FROM tickets ORDER BY created_at DESC").all() as any[];
+  return res.json(rows.map(t => ({ ...t, userFullName: t.user_fullname, createdAt: t.created_at, messages: JSON.parse(t.messages) })));
 });
 
-// Admin- Update ticket status values
 app.post("/api/admin/tickets/:ticketId/status", verifyAdmin, (req, res) => {
-  const { ticketId } = req.params;
-  const { status } = req.body; // 'read' | 'under_review' | 'ended'
-
-  const db = getDB();
-  const tIdx = db.tickets.findIndex((t: any) => t.id === ticketId);
-
-  if (tIdx === -1) {
-    return res.status(404).json({ message: "تیکت یافت نشد." });
-  }
-
-  db.tickets[tIdx].status = status;
-  saveDB(db);
-
-  return res.json({ message: "عملیات تغییر وضعیت تیکت با موفقیت صورت پذیرفت.", status });
+  const { status } = req.body;
+  const result = db.prepare("UPDATE tickets SET status=? WHERE id=?").run(status, req.params.ticketId);
+  if (!result.changes) return res.status(404).json({ message: "تیکت یافت نشد." });
+  return res.json({ message: "وضعیت تیکت تغییر کرد.", status });
 });
 
-// Admin- Announcements APIS
+// ─── Announcements ────────────────────────────────────────────────────────────
 app.get("/api/announcements", (req, res) => {
-  const db = getDB();
-  return res.json(db.announcements || []);
+  return res.json(db.prepare("SELECT * FROM announcements ORDER BY created_at DESC").all());
 });
 
 app.post("/api/admin/announcements", verifyAdmin, (req, res) => {
   const { title, description, image } = req.body;
-  if (!title || !description) {
-    return res.status(400).json({ message: "عنوان و توضیحات الزامی است." });
-  }
-
-  const db = getDB();
-  if (!db.announcements) db.announcements = [];
-
-  const newAnn = {
-    id: "ann-" + Date.now(),
-    title,
-    description,
+  if (!title || !description) return res.status(400).json({ message: "عنوان و توضیحات الزامی است." });
+  const newAnn = { id: "ann-" + Date.now(), title, description,
     image: image || "https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=800&q=80",
-    createdAt: new Date().toLocaleDateString("fa-IR")
-  };
-
-  db.announcements.push(newAnn);
-  saveDB(db);
+    created_at: new Date().toLocaleDateString("fa-IR") };
+  db.prepare("INSERT INTO announcements (id,title,description,image,created_at) VALUES (?,?,?,?,?)")
+    .run(newAnn.id, newAnn.title, newAnn.description, newAnn.image, newAnn.created_at);
   return res.json(newAnn);
 });
 
 app.delete("/api/admin/announcements/:id", verifyAdmin, (req, res) => {
-  const { id } = req.params;
-  const db = getDB();
-  if (!db.announcements) db.announcements = [];
-
-  db.announcements = db.announcements.filter((a: any) => a.id !== id);
-  saveDB(db);
-
-  return res.json({ message: "اعلان با موفقیت حذف گردید." });
+  db.prepare("DELETE FROM announcements WHERE id=?").run(req.params.id);
+  return res.json({ message: "اعلان حذف شد." });
 });
 
-// Admin- Ads Banners APIs
+// ─── Banners ──────────────────────────────────────────────────────────────────
 app.get("/api/banners", (req, res) => {
-  const db = getDB();
-  return res.json(db.banners || []);
+  return res.json(db.prepare("SELECT * FROM banners").all()
+    .map((b: any) => ({ ...b, imageUrl: b.image_url })));
 });
 
 app.post("/api/admin/banners", verifyAdmin, (req, res) => {
-  const { banner1, banner2, banner3, title1, title2, title3, link1, link2, link3 } = req.body;
-  const db = getDB();
-
-  db.banners = [
-    { id: "banner1", imageUrl: banner1 || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80", title: title1 || "تبلیغات شما در پلتفرم", link: link1 || "" },
-    { id: "banner2", imageUrl: banner2 || "https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=800&q=80", title: "چاپ نانو کارت هوشمند", link: link2 || "" },
-    { id: "banner3", imageUrl: banner3 || "https://images.unsplash.com/photo-1600132806370-bf17e65e942f?w=800&q=80", title: title3 || "مکانیسم رزرو نوبت تلفنی", link: link3 || "" }
-  ];
-
-  saveDB(db);
-  return res.json({ message: "بنرهای تبلیغاتی با موفقیت ویرایش گردید.", banners: db.banners });
+  const { banner1, banner2, banner3 } = req.body;
+  const upsert = db.prepare("INSERT OR REPLACE INTO banners (id,image_url,title) VALUES (?,?,?)");
+  upsert.run("banner1", banner1 || "", "بنر اول");
+  upsert.run("banner2", banner2 || "", "بنر دوم");
+  upsert.run("banner3", banner3 || "", "بنر سوم");
+  return res.json({ message: "بنرها ویرایش شد.", banners: db.prepare("SELECT * FROM banners").all() });
 });
 
-// Start integration of Vite middleware and serving logic
+// ─── Bootstrap ────────────────────────────────────────────────────────────────
 async function bootstrap() {
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
+    const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res, next) => {
-      if (req.path.startsWith("/api")) return next();
+      if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) return next();
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
-  // HTTP server که هم Express و هم WebSocket روش کار می‌کنن
   const httpServer = createHttpServer(app);
-
-  // WebSocket Server روی همون پورت
   const wss = new WebSocketServer({ server: httpServer });
 
   wss.on("connection", (ws, req) => {
-    // توکن رو از query string می‌گیریم: ws://...?token=xxx
-    const url = new URL(req.url || "", "http://localhost");
-    const token = url.searchParams.get("token");
-
-    let username = "anonymous";
+    const url      = new URL(req.url || "", "http://localhost");
+    const token    = url.searchParams.get("token");
+    let username   = "anonymous";
     let role: "user" | "admin" = "user";
-
     if (token) {
       try {
         const decoded = jwt.verify(token, JWT_SECRET) as any;
         username = decoded.username;
-        role = username === "admin" ? "admin" : "user";
-      } catch {
-        ws.close(1008, "توکن نامعتبر");
-        return;
-      }
+        role     = username === "admin" ? "admin" : "user";
+      } catch { ws.close(1008, "توکن نامعتبر"); return; }
     }
-
     const client: WsClient = { ws, ticketId: null, username, role };
     wsClients.push(client);
-    console.log(`[WS] متصل شد: ${username} (${role}) — مجموع: ${wsClients.length}`);
-
     ws.on("message", (raw) => {
       try {
         const msg = JSON.parse(raw.toString());
-        // کلاینت می‌گه کدوم تیکت رو داره می‌بینه
-        if (msg.type === "watch_ticket") {
-          client.ticketId = msg.ticketId || null;
-        }
-        // ادمین می‌تونه بگه همه تیکت‌ها رو notify کن
-        if (msg.type === "watch_all" && role === "admin") {
-          client.ticketId = "ALL_ADMIN";
-        }
+        if (msg.type === "watch_ticket") client.ticketId = msg.ticketId || null;
+        if (msg.type === "watch_all" && role === "admin") client.ticketId = "ALL_ADMIN";
       } catch {}
     });
-
-    ws.on("close", () => {
-      const idx = wsClients.indexOf(client);
-      if (idx !== -1) wsClients.splice(idx, 1);
-      console.log(`[WS] قطع شد: ${username} — مجموع: ${wsClients.length}`);
-    });
-
-    ws.on("error", (err) => console.error("[WS Error]", err.message));
-
-    // خوش‌آمد
+    ws.on("close", () => { const i = wsClients.indexOf(client); if (i !== -1) wsClients.splice(i, 1); });
+    ws.on("error", (e) => console.error("[WS]", e.message));
     ws.send(JSON.stringify({ type: "connected", username, role }));
   });
 
   httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`[SERVER] در حال اجرا روی http://localhost:${PORT}`);
+    console.log(`[SERVER] http://localhost:${PORT}`);
   });
 }
 

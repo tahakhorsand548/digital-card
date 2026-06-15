@@ -4,7 +4,8 @@ import { getAuthToken } from "../utils/api";
 export type WsIncomingMsg =
   | { type: "connected"; username: string; role: string }
   | { type: "new_message"; ticketId: string; message: any; newStatus: string }
-  | { type: "ticket_updated"; ticketId: string; username: string; newStatus: string };
+  | { type: "ticket_updated"; ticketId: string; username: string; newStatus: string }
+  | { type: "new_ticket"; ticket: any };
 
 interface UseTicketSocketOptions {
   // نقش کاربر — ادمین همه تیکت‌ها رو watch می‌کنه
