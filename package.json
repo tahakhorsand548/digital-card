@@ -27,7 +27,8 @@
     "zod": "^4.4.3",
     "better-sqlite3": "*",
     "multer": "*",
-    "ws": "*"
+    "ws": "*",
+    "qrcode": "*"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
@@ -42,6 +43,7 @@
     "vite": "^6.2.3",
     "@types/better-sqlite3": "*",
     "@types/multer": "*",
-    "@types/ws": "*"
+    "@types/ws": "*",
+    "@types/qrcode": "*"
   }
 }

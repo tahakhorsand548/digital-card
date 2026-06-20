@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { User, Ticket, GlobalAnnouncement } from "../types";
 import { apiFetch, setAuthToken } from "../utils/api";
+import QRCode from "qrcode";
 
 // const fetch = apiFetch;
 
@@ -379,16 +380,41 @@ export default function AdminPanel({
     }
   };
 
-  const generateAutoQrForUser = () => {
+  // تولید QR به صورت محلی (بدون نیاز به سرویس خارجی) و ذخیره دائمی روی سرور
+  const generateAutoQrForUser = async () => {
     if (!selectedQrUser) return;
     setSimulatingUpload(true);
-    setTimeout(() => {
-      // Dynamic fallback google chart API or gorgeous prearranged QR template code
+    try {
       const url = `${window.location.origin}/card/${selectedQrUser.username}?source=scan`;
-      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(url)}`;
-      setUploadedQrBase64(qrApiUrl);
+
+      // ساخت QR در همین مرورگر — هیچ درخواستی به سرویس خارجی نمی‌ره
+      const dataUrl = await QRCode.toDataURL(url, {
+        width: 500,
+        margin: 2,
+        color: { dark: "#000000", light: "#ffffff" },
+      });
+
+      // تبدیل base64 به File تا بشه با همون endpoint آپلود فرستاد
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `qr-${selectedQrUser.username}.png`, { type: "image/png" });
+
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await apiFetch("/api/admin/upload", { method: "POST", body: formData });
+
+      if (res.ok) {
+        const data = await res.json();
+        // حالا یه URL دائمی روی دیسک خودمون داریم — نه لینک به goqr.me
+        setUploadedQrBase64(data.url);
+      } else {
+        alert("خطا در ذخیره‌سازی کیوآرکد روی سرور.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("خطا در تولید کیوآرکد.");
+    } finally {
       setSimulatingUpload(false);
-    }, 1200);
+    }
   };
 
   const handleApproveQrRequest = async () => {
