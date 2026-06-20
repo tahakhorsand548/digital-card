@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -16,10 +17,19 @@ app.set("trust proxy", 1);
 const PORT = (process.env.PORT && !process.env.DISABLE_HMR)
   ? parseInt(process.env.PORT, 10) : 3000;
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev_only_secret_change_in_production";
+// ─── JWT_SECRET الزامی است ────────────────────────────────────────────────────
+// سرور بدون این متغیر اصلاً بالا نمی‌آید — هیچ مقدار پیش‌فرض ناامنی وجود ندارد.
 if (!process.env.JWT_SECRET) {
-  console.warn("⚠️  JWT_SECRET تنظیم نشده! در production حتماً از متغیر محیطی استفاده کنید.");
+  console.error("❌ خطای راه‌اندازی: متغیر محیطی JWT_SECRET تنظیم نشده است.");
+  console.error("   یک فایل .env بسازید (از روی .env.example) و یک مقدار تصادفی قرار دهید:");
+  console.error('   node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"');
+  process.exit(1);
 }
+if (process.env.JWT_SECRET.length < 32) {
+  console.error("❌ خطای راه‌اندازی: JWT_SECRET باید حداقل ۳۲ کاراکتر باشد (مقدار فعلی خیلی کوتاه و قابل حدس است).");
+  process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // ─── پوشه‌های داده ────────────────────────────────────────────────────────────
 const DATA_DIR    = path.join(process.cwd(), "data");
