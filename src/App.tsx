@@ -143,7 +143,7 @@ function PublicCardPage() {
 
 // ─── محافظ مسیر داشبورد کاربر ────────────────────────────────────────────────
 function DashboardRoute() {
-  const { currentUser, sessionLoading, handleLogout } = React.useContext(AuthContext);
+  const { currentUser, sessionLoading, handleLogout, handleLoginSuccess } = React.useContext(AuthContext);
   const { username, tab } = useParams<{ username: string; tab?: string }>();
   const navigate = useNavigate();
 
@@ -152,7 +152,7 @@ function DashboardRoute() {
   if (!currentUser) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
       <AuthPages onLoginSuccess={(user) => {
-        React.useContext(AuthContext).handleLoginSuccess(user);
+        handleLoginSuccess(user);
         navigate(user.username === "admin" ? "/admin" : `/dashboard/${user.username}`);
       }} initialMode="login" />
     </div>
@@ -175,7 +175,7 @@ function DashboardRoute() {
 
 // ─── محافظ مسیر ادمین ────────────────────────────────────────────────────────
 function AdminRoute() {
-  const { currentUser, sessionLoading, checkActiveSession, handleLogout } = React.useContext(AuthContext);
+  const { currentUser, sessionLoading, checkActiveSession, handleLogout, handleLoginSuccess } = React.useContext(AuthContext);
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
 
@@ -185,7 +185,7 @@ function AdminRoute() {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md bg-white p-6 rounded-2xl border border-slate-200 shadow-xl">
         <AuthPages onLoginSuccess={(user) => {
-          React.useContext(AuthContext).handleLoginSuccess(user);
+          handleLoginSuccess(user);
           if (user.username === "admin") navigate("/admin");
         }} initialMode="login" />
         <p className="text-[10px] text-red-600 mt-4 text-center font-bold">فقط ادمین می‌تواند وارد این صفحه شود.</p>
