@@ -27,9 +27,20 @@ interface AuthCtx {
 export const AuthContext = React.createContext<AuthCtx>({} as AuthCtx);
 
 // ─── Root Provider ────────────────────────────────────────────────────────────
+// App فقط BrowserRouter رو wrap می‌کنه. منطق state و navigate باید
+// زیر BrowserRouter باشه چون useNavigate نیاز به Router Context داره.
 export default function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
+  );
+}
+
+function AppContent() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
+  const navigate = useNavigate();
 
   const checkActiveSession = async () => {
     setSessionLoading(true);
@@ -65,21 +76,21 @@ export default function App() {
     } catch {}
     removeAuthToken();
     setCurrentUser(null);
+    // بعد از خروج، کاربر رو صریحاً به صفحه اصلی دامنه برمی‌گردونیم
+    navigate("/", { replace: true });
   };
 
   return (
     <AuthContext.Provider value={{ currentUser, sessionLoading, checkActiveSession, handleLoginSuccess, handleLogout }}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/card/:username" element={<PublicCardPage />} />
-          <Route path="/dashboard/:username" element={<DashboardRoute />} />
-          <Route path="/dashboard/:username/:tab" element={<DashboardRoute />} />
-          <Route path="/admin" element={<AdminRoute />} />
-          <Route path="/admin/:tab" element={<AdminRoute />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/card/:username" element={<PublicCardPage />} />
+        <Route path="/dashboard/:username" element={<DashboardRoute />} />
+        <Route path="/dashboard/:username/:tab" element={<DashboardRoute />} />
+        <Route path="/admin" element={<AdminRoute />} />
+        <Route path="/admin/:tab" element={<AdminRoute />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
     </AuthContext.Provider>
   );
 }

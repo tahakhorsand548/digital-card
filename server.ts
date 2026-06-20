@@ -156,7 +156,13 @@ const wsClients: WsClient[] = [];
 function broadcastToTicket(ticketId: string, payload: object) {
   const msg = JSON.stringify(payload);
   wsClients.forEach(c => {
-    if (c.ticketId === ticketId && c.ws.readyState === WebSocket.OPEN) c.ws.send(msg);
+    // پیام رو به دو دسته می‌فرستیم: کسی که دقیقاً همین تیکت رو باز کرده،
+    // و هر ادمینی که در حالت "watch_all" است (یعنی روی پنل ادمین، حتی اگه این تیکت خاص را باز نکرده باشد)
+    const isWatchingThisTicket = c.ticketId === ticketId;
+    const isAdminWatchingAll = c.role === "admin" && c.ticketId === "ALL_ADMIN";
+    if ((isWatchingThisTicket || isAdminWatchingAll) && c.ws.readyState === WebSocket.OPEN) {
+      c.ws.send(msg);
+    }
   });
 }
 function notifyAdmin(payload: object) {
