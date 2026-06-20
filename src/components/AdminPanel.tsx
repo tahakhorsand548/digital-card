@@ -60,44 +60,6 @@ export default function AdminPanel({
   const [errorMsg, setErrorMsg] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // ─── WebSocket: real-time تیکت‌ها ──────────────────────────────────────────
-  useTicketSocket({
-    role: "admin",
-    onMessage: (msg) => {
-      if (msg.type === "new_message") {
-        // پیام جدید — اگه همین تیکت باز هست آپدیت کن
-        setActiveTicket(prev => {
-          if (prev && prev.id === msg.ticketId) {
-            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-            return { ...prev, status: msg.newStatus as any, messages: [...prev.messages, msg.message] };
-          }
-          return prev;
-        });
-        // لیست تیکت‌ها رو هم آپدیت کن
-        setTicketsList(prev => prev.map(t =>
-          t.id === msg.ticketId
-            ? { ...t, status: msg.newStatus as any }
-            : t
-        ));
-      }
-      if (msg.type === "ticket_updated") {
-        // تغییر وضعیت تیکت موجود
-        setTicketsList(prev => prev.map(t =>
-          t.id === msg.ticketId ? { ...t, status: msg.newStatus as any } : t
-        ));
-      }
-      if (msg.type === "new_ticket") {
-        // تیکت جدید — به اول لیست اضافه می‌شه
-        setTicketsList(prev => [msg.ticket, ...prev]);
-      }
-    },
-  });
-
-  // اسکرول به آخرین پیام وقتی تیکت عوض می‌شه
-  useEffect(() => {
-    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-  }, [activeTicket?.id]);
-
   // States
   const [deskStats, setDeskStats] = useState({
     totalCustomers: 0,
@@ -108,6 +70,7 @@ export default function AdminPanel({
   const [qrRequests, setQrRequests] = useState<any[]>([]);
   const [ticketsList, setTicketsList] = useState<Ticket[]>([]);
   const [announcements, setAnnouncements] = useState<GlobalAnnouncement[]>([]);
+
 
   // Selected for edits / modals
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -133,6 +96,38 @@ export default function AdminPanel({
   const [adBanner1, setAdBanner1] = useState("");
   const [adBanner2, setAdBanner2] = useState("");
   const [adBanner3, setAdBanner3] = useState("");
+
+  // ─── WebSocket: real-time تیکت‌ها (بعد از همه useState ها) ─────────────────
+  useTicketSocket({
+    role: "admin",
+    onMessage: (msg) => {
+      if (msg.type === "new_message") {
+        setActiveTicket((prev: any) => {
+          if (prev && prev.id === msg.ticketId) {
+            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+            return { ...prev, status: msg.newStatus, messages: [...prev.messages, msg.message] };
+          }
+          return prev;
+        });
+        setTicketsList((prev: any[]) => prev.map((t: any) =>
+          t.id === msg.ticketId ? { ...t, status: msg.newStatus } : t
+        ));
+      }
+      if (msg.type === "ticket_updated") {
+        setTicketsList((prev: any[]) => prev.map((t: any) =>
+          t.id === msg.ticketId ? { ...t, status: msg.newStatus } : t
+        ));
+      }
+      if (msg.type === "new_ticket") {
+        setTicketsList((prev: any[]) => [msg.ticket, ...prev]);
+      }
+    },
+  });
+
+  // اسکرول به آخرین پیام
+  useEffect(() => {
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, [activeTicket?.id]);
 
   // Banners Links & Titles
   const [adLink1, setAdLink1] = useState("");
@@ -201,7 +196,7 @@ export default function AdminPanel({
       setDeskStats(stats);
 
       // 2. Users
-      const usersRes = await fetch("/api/admin/users");
+      const usersRes = await apiFetch("/api/admin/users");
       if (!usersRes.ok) {
         setErrorMsg(
           `خطا در ارزیابی و دریافت لیست کاربران. کد خطا: ${usersRes.status}`,
@@ -212,7 +207,7 @@ export default function AdminPanel({
       setUsersList(u);
 
       // 3. QR Requests
-      const qrRes = await fetch("/api/admin/qr-requests");
+      const qrRes = await apiFetch("/api/admin/qr-requests");
       if (!qrRes.ok) {
         setErrorMsg(
           `خطا در ارزیابی درخواست‌های کیوآرکد. کد خطا: ${qrRes.status}`,
@@ -223,7 +218,7 @@ export default function AdminPanel({
       setQrRequests(qr);
 
       // 4. Tickets List
-      const ticketsRes = await fetch("/api/admin/tickets");
+      const ticketsRes = await apiFetch("/api/admin/tickets");
       if (!ticketsRes.ok) {
         setErrorMsg(
           `خطا در ارزیابی تیکت‌های پشتیبانی. کد خطا: ${ticketsRes.status}`,
@@ -234,14 +229,14 @@ export default function AdminPanel({
       setTicketsList(t);
 
       // 5. Announcements
-      const annRes = await fetch("/api/announcements");
+      const annRes = await apiFetch("/api/announcements");
       if (annRes.ok) {
         const ann = await annRes.json();
         setAnnouncements(ann);
       }
 
       // 6. Banners
-      const bannersRes = await fetch("/api/banners");
+      const bannersRes = await apiFetch("/api/banners");
       if (bannersRes.ok) {
         const ban = await bannersRes.json();
         if (ban && ban.length >= 3) {
@@ -300,7 +295,7 @@ export default function AdminPanel({
     )
       return;
     try {
-      const res = await fetch(`/api/admin/users/${username}/reset`, {
+      const res = await apiFetch(`/api/admin/users/${username}/reset`, {
         method: "POST",
       });
       if (res.ok) {
@@ -320,7 +315,7 @@ export default function AdminPanel({
     )
       return;
     try {
-      const res = await fetch(`/api/admin/users/${username}/delete`, {
+      const res = await apiFetch(`/api/admin/users/${username}/delete`, {
         method: "POST",
       });
       if (res.ok) {
@@ -334,7 +329,7 @@ export default function AdminPanel({
 
   const handleToggleSuspend = async (username: string) => {
     try {
-      const res = await fetch(`/api/admin/users/${username}/toggle-suspend`, {
+      const res = await apiFetch(`/api/admin/users/${username}/toggle-suspend`, {
         method: "POST",
       });
       if (res.ok) {
@@ -349,7 +344,7 @@ export default function AdminPanel({
 
   const handleBypassUserLogin = async (username: string) => {
     try {
-      const res = await fetch(`/api/admin/users/${username}/bypass-login`, {
+      const res = await apiFetch(`/api/admin/users/${username}/bypass-login`, {
         method: "POST",
       });
       const data = await res.json();
@@ -399,7 +394,7 @@ export default function AdminPanel({
   const handleApproveQrRequest = async () => {
     if (!selectedQrUser || !uploadedQrBase64) return;
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/admin/qr-requests/${selectedQrUser.username}/approve`,
         {
           method: "POST",
@@ -425,7 +420,7 @@ export default function AdminPanel({
 
     try {
       // Send chat message
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/user/${activeTicket.username}/tickets/${activeTicket.id}/messages`,
         {
           method: "POST",
@@ -448,7 +443,7 @@ export default function AdminPanel({
     status: "read" | "under_review" | "ended",
   ) => {
     try {
-      const res = await fetch(`/api/admin/tickets/${ticketId}/status`, {
+      const res = await apiFetch(`/api/admin/tickets/${ticketId}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -470,7 +465,7 @@ export default function AdminPanel({
     e.preventDefault();
     if (!annTitle || !annDesc) return;
     try {
-      const res = await fetch("/api/admin/announcements", {
+      const res = await apiFetch("/api/admin/announcements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -493,7 +488,7 @@ export default function AdminPanel({
 
   const handleDeleteAnnouncement = async (annId: string) => {
     try {
-      const res = await fetch(`/api/admin/announcements/${annId}`, {
+      const res = await apiFetch(`/api/admin/announcements/${annId}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -508,7 +503,7 @@ export default function AdminPanel({
   // Ads banners customization trigger
   const handleSaveAdsBanners = async () => {
     try {
-      const res = await fetch("/api/admin/banners", {
+      const res = await apiFetch("/api/admin/banners", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

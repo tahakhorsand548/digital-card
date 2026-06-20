@@ -175,7 +175,7 @@ export default function UserDashboard({
     setErrorMsg("");
     try {
       // 1. Fetch User Card
-      const cardRes = await fetch(`/api/user/card/${user.username}`);
+      const cardRes = await apiFetch(`/api/user/card/${user.username}`);
       if (cardRes.ok) {
         const data = await cardRes.json();
         setCardData(data);
@@ -192,21 +192,21 @@ export default function UserDashboard({
       }
 
       // 2. Fetch Tickets
-      const ticketsRes = await fetch(`/api/user/${user.username}/tickets`);
+      const ticketsRes = await apiFetch(`/api/user/${user.username}/tickets`);
       if (ticketsRes.ok) {
         const t = await ticketsRes.json();
         setTickets(t);
       }
 
       // 3. Fetch public announcements
-      const annRes = await fetch("/api/announcements");
+      const annRes = await apiFetch("/api/announcements");
       if (annRes.ok) {
         const a = await annRes.json();
         setAnnouncements(a);
       }
 
       // 4. Fetch advertising banners
-      const banRes = await fetch("/api/banners");
+      const banRes = await apiFetch("/api/banners");
       if (banRes.ok) {
         const b = await banRes.json();
         setBanners(b);
@@ -226,7 +226,7 @@ export default function UserDashboard({
     setSaveLoading(true);
     setFeedback("");
     try {
-      const res = await fetch(`/api/user/card/${user.username}`, {
+      const res = await apiFetch(`/api/user/card/${user.username}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(cardData),
@@ -315,7 +315,7 @@ export default function UserDashboard({
     e.preventDefault();
     if (!newTicketTitle || !newTicketDesc) return;
     try {
-      const res = await fetch(`/api/user/${user.username}/tickets`, {
+      const res = await apiFetch(`/api/user/${user.username}/tickets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -363,7 +363,7 @@ export default function UserDashboard({
   // Request QR code approval trigger
   const handleRequestQrCode = async () => {
     try {
-      const res = await fetch(`/api/user/${user.username}/qr-request`, {
+      const res = await apiFetch(`/api/user/${user.username}/qr-request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
