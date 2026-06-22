@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { CardData } from "../types";
 import { apiFetch } from "../utils/api";
+import MinimalistCard from "./MinimalistCard";
 
 interface CardPreviewProps {
   data: CardData;
@@ -70,6 +71,11 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
       window.open(url, "_blank");
     }
   };
+
+  // ─── طرح مینیمال سفارشی — کاملاً مستقل از بقیه‌ی templateها ───────────────
+  if (design?.template === "minimalist") {
+    return <MinimalistCard data={data} username={username} isPreview={isPreview} onInteraction={handleInteraction} />;
+  }
 
   const getDayStatus = () => {
     const daysWeek = ["جمعه", "شنبه", "یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنجشنبه"];
@@ -506,41 +512,6 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
             height: 3px !important;
             background: repeating-linear-gradient(90deg, transparent, transparent 4px, ${isDark ? "#dfb841" : "#997316"} 4px, ${isDark ? "#dfb841" : "#997316"} 8px) !important;
             margin: 20px 0 !important;
-          }
-        `}} />
-      )}
-      {design?.template === "minimalist" && (
-        <style dangerouslySetInnerHTML={{ __html: `
-          @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
-          
-          .template-minimalist {
-            font-family: 'Space Grotesk', 'Inter', sans-serif !important;
-            background-color: ${isDark ? "#080808" : "#fafafa"} !important;
-            color: ${isDark ? "#eeeeee" : "#111111"} !important;
-            font-weight: 300 !important;
-          }
-          .template-minimalist h1, 
-          .template-minimalist h2, 
-          .template-minimalist h3, 
-          .template-minimalist h4 {
-            font-weight: 600 !important;
-            letter-spacing: -0.04em !important;
-            color: ${isDark ? "#ffffff" : "#000000"} !important;
-            font-family: 'Space Grotesk', sans-serif !important;
-          }
-          .template-minimalist .shadow-lg, 
-          .template-minimalist .shadow-xl, 
-          .template-minimalist .shadow-md,
-          .template-minimalist .shadow-sm { 
-            box-shadow: none !important; 
-          }
-          .template-minimalist button, 
-          .template-minimalist .rounded-xl, 
-          .template-minimalist .rounded-2xl {
-            border-radius: 0px !important;
-            border: 1px solid ${isDark ? "#2a2a2a" : "#e5e7eb"} !important;
-            background-color: ${isDark ? "#0e0e0e" : "#ffffff"} !important;
-            color: ${isDark ? "#dddddd" : "#333333"} !important;
           }
         `}} />
       )}
