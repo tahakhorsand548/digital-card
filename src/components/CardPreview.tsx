@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
+import {
+  Phone, Globe, MapPin, MessageSquare, Clock, ArrowLeft, ArrowRight,
+  Instagram, Send, CreditCard, Play, Youtube, CheckCircle2, AlertCircle,
+  Store, Image as ImageIcon
+} from "lucide-react";
 import { CardData } from "../types";
 import { apiFetch } from "../utils/api";
 
@@ -27,8 +32,54 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     design
   } = data;
 
-  // Dark mode state - Initialized from data, but toggleable by user
-  const [isDarkMode, setIsDarkMode] = useState(design?.isDark ?? false);
+  const themeHex = design?.colorTheme || "#3B82F6";
+  const isDark = design?.isDark ?? false;
+
+  // Gallery Sliders State
+  const [activeGalleryIdx, setActiveGalleryIdx] = useState(0);
+  const [activeProductIdx, setActiveProductIdx] = useState(0);
+
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const productsRef = useRef<HTMLDivElement>(null);
+
+  // Auto Scroll Gallery every 3 seconds
+  useEffect(() => {
+    if (gallery && gallery.length > 1) {
+      const interval = setInterval(() => {
+        setActiveGalleryIdx((prev) => (prev + 1) % gallery.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [gallery]);
+
+  // Auto Scroll Products every 3 seconds
+  useEffect(() => {
+    if (products && products.length > 1) {
+      const interval = setInterval(() => {
+        setActiveProductIdx((prev) => (prev + 1) % products.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [products]);
+
+  // Sync scroll positions with interval state
+  useEffect(() => {
+    if (galleryRef.current && gallery && gallery.length > 1) {
+      const children = galleryRef.current.children;
+      if (children[activeGalleryIdx]) {
+        children[activeGalleryIdx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [activeGalleryIdx, gallery]);
+
+  useEffect(() => {
+    if (productsRef.current && products && products.length > 1) {
+      const children = productsRef.current.children;
+      if (children[activeProductIdx]) {
+        children[activeProductIdx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [activeProductIdx, products]);
 
   // Click Tracker for Live Cards
   const handleInteraction = async (type: string, url?: string) => {
@@ -47,100 +98,63 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     const daysWeek = ["جمعه", "شنبه", "یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنجشنبه"];
     const todayStr = daysWeek[new Date().getDay()];
     const todaySchedule = workingDays?.[todayStr];
-    
+
     if (!todaySchedule || !todaySchedule.isOpen || todaySchedule.isClosed) {
-      return { text: "تعطیل", color: "text-red-500 dark:text-red-400", bg: "bg-red-100 dark:bg-red-900/40", status: false };
+      return { text: "امروز تعطیل است", color: "text-red-500" };
     }
-    return { text: "باز", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-900/40", status: true };
+    return { text: `باز است (ساعت کاری: ${todaySchedule.openTime} الی ${todaySchedule.closeTime})`, color: "text-emerald-500" };
   };
 
   const dayStatus = getDayStatus();
 
-  // Intersection Observer for Carousel Snap Effect
-  const carouselRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          entry.target.classList.remove('opacity-50', 'scale-90');
-          entry.target.classList.add('opacity-100', 'scale-100');
-        } else {
-          entry.target.classList.add('opacity-50', 'scale-90');
-          entry.target.classList.remove('opacity-100', 'scale-100');
-        }
-      });
-    }, { threshold: 0.5 });
-
-    const elements = document.querySelectorAll('.carousel-item');
-    elements.forEach(item => observer.observe(item));
-
-    return () => observer.disconnect();
-  }, [gallery, products, branches]);
-
   return (
-    <div className={`${isDarkMode ? 'dark' : ''} font-sans`}>
-      <style dangerouslySetInnerHTML={{ __html: `
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .glass-icon {
-          background: linear-gradient(135deg, rgba(167, 139, 250, 0.8) 0%, rgba(124, 58, 237, 0.9) 100%);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.4);
-          box-shadow: 0 4px 15px rgba(124, 58, 237, 0.2);
-        }
-        .insta-gradient { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
-        .carousel-item { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-      `}} />
+    <div className={isDark ? "dark" : ""}>
+      <div
+        className={`max-w-md mx-auto min-h-screen relative overflow-hidden shadow-2xl transition-colors duration-300 bg-[#fafaff] dark:bg-[#0f172a] text-gray-800 dark:text-gray-200 font-sans card-preview-scope template-${design?.template || "modern"}`}
+        style={{ direction: "rtl" }}
+      >
+        <style dangerouslySetInnerHTML={{ __html: `
+          .hide-scrollbar::-webkit-scrollbar { display: none; }
+          .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+          .glass-icon { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 15px rgba(124, 58, 237, 0.2); }
+          .insta-gradient { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+          .carousel-item { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+          .shadow-soft { box-shadow: 0 4px 20px -2px rgba(124, 58, 237, 0.08); }
+          .shadow-card { box-shadow: 0 8px 30px -5px rgba(0, 0, 0, 0.05); }
+        `}} />
 
-      {/* Mobile Container */}
-      <div className="max-w-md mx-auto bg-[#fafaff] dark:bg-[#0f172a] min-h-screen relative overflow-hidden shadow-2xl transition-colors duration-300 text-gray-800 dark:text-gray-200 antialiased" style={{ direction: "rtl" }}>
-        
         {/* Header Section */}
         <header className="relative pt-4 pb-6 px-4 shadow-sm min-h-[350px] overflow-hidden">
-          <img 
-            src={bgImageUrl || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=800&q=80"} 
-            alt="پس‌زمینه"
-            className="absolute inset-0 w-full h-full object-cover object-center opacity-50 dark:opacity-30 transition-opacity z-0"
-            referrerPolicy="no-referrer"
-          />
+          {bgImageUrl ? (
+            <img src={bgImageUrl} alt="پس‌زمینه" className="absolute inset-0 w-full h-full object-cover object-center opacity-50 dark:opacity-30 transition-opacity z-0" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="absolute inset-0 w-full h-full bg-gray-200 dark:bg-gray-800 opacity-50 dark:opacity-30 transition-opacity z-0"></div>
+          )}
           <div className="absolute inset-0 bg-white/30 dark:bg-black/40 transition-colors z-0"></div>
           <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#fafaff] dark:from-[#0f172a] to-transparent z-0 transition-colors duration-300"></div>
-          
-          <div className="flex justify-end items-center relative z-10">
-            <button 
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="w-9 h-9 bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm text-gray-700 dark:text-gray-300 hover:scale-105 transition-transform"
-            >
-              <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'} text-sm`}></i>
-            </button>
-          </div>
-          
-          <div className="flex flex-col items-center mt-2 relative z-10">
-            <div className="w-24 h-24 mt-4 mb-1 flex items-center justify-center overflow-hidden bg-white/10 backdrop-blur-sm rounded-full shadow-lg border-2 border-white/20">
+
+          <div className="flex flex-col items-center mt-8 relative z-10">
+            <div className="w-24 h-24 mt-4 mb-1 flex items-center justify-center overflow-hidden rounded-2xl bg-white dark:bg-gray-800 shadow-md">
               {logoUrl ? (
-                <img src={logoUrl} alt="لوگو" className="w-full h-full object-contain p-2" referrerPolicy="no-referrer" />
+                <img src={logoUrl} alt="لوگو" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
               ) : (
-                <span className="text-4xl font-bold text-gray-800 dark:text-white">
-                  {businessName ? businessName.charAt(0) : "B"}
-                </span>
+                <span className="text-3xl font-bold text-gray-400">{businessName ? businessName.charAt(0) : "B"}</span>
               )}
             </div>
 
             <h1 className="text-3xl text-center font-extrabold text-gray-900 dark:text-white mb-1 drop-shadow-md">
-              {businessName || "نام کسب و کار"}
+              {businessName || "نام کسب و کار شما"}
             </h1>
 
             {brandManager && (
               <p className="text-xs text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-1 font-bold bg-white/60 dark:bg-gray-800/60 px-3 py-1 rounded-full backdrop-blur-sm shadow-sm transition-colors">
-                مدیریت: <span className="text-violet-700 dark:text-violet-400">{brandManager}</span>
+                مدیریت: <span style={{ color: themeHex }}>{brandManager}</span>
               </p>
             )}
 
             <div className="text-center px-3 space-y-2 mt-2 drop-shadow-md">
               {slogan && (
-                <p className="text-violet-800 dark:text-violet-300 font-extrabold text-[13px]">{slogan}</p>
+                <p className="font-extrabold text-[13px]" style={{ color: themeHex }}>"{slogan}"</p>
               )}
               {description && (
                 <p className="text-xs text-gray-800 dark:text-gray-300 leading-relaxed font-bold">
@@ -155,94 +169,92 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
         <main className="px-4 py-4 space-y-6 relative z-10">
           
           {/* Contact Info Card */}
-          {(phones?.length || landlines?.length || website) ? (
-            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 transition-colors">
-              <div className="flex flex-col space-y-2.5">
-                
-                {landlines && landlines.length > 0 && (
-                  <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2.5 rounded-2xl transition-colors">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl glass-icon flex items-center justify-center text-white shadow-sm">
-                        <i className="fa-solid fa-phone-flip text-[10px]"></i>
-                      </div>
-                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">تلفن ثابت</span>
+          <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 transition-colors">
+            <div className="flex flex-col space-y-2.5">
+              {landlines?.map((l, idx) => l && (
+                <button
+                  key={`landline-${idx}`}
+                  onClick={() => handleInteraction("landline", `tel:${l}`)}
+                  className="flex justify-between items-center w-full bg-gray-50 dark:bg-gray-800 p-2.5 rounded-2xl transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl glass-icon flex items-center justify-center text-white shadow-sm" style={{ background: `linear-gradient(135deg, ${themeHex}cc 0%, ${themeHex}e6 100%)` }}>
+                      <Phone className="w-4 h-4" />
                     </div>
-                    <div className="flex flex-col gap-1 text-left">
-                      {landlines.map((l, idx) => l && (
-                        <button key={idx} onClick={() => handleInteraction("landline", `tel:${l}`)} className="text-xs font-bold text-gray-800 dark:text-gray-200 tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors" dir="ltr">
-                          {l}
-                        </button>
-                      ))}
-                    </div>
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">تلفن ثابت</span>
                   </div>
-                )}
+                  <span className="text-xs font-bold text-gray-800 dark:text-gray-200 tracking-wider" dir="ltr">{l}</span>
+                </button>
+              ))}
 
-                {phones && phones.length > 0 && (
-                  <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2.5 rounded-2xl transition-colors">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl glass-icon flex items-center justify-center text-white shadow-sm">
-                        <i className="fa-solid fa-mobile-screen-button text-[11px]"></i>
-                      </div>
-                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">شماره تلفن</span>
+              {phones?.map((p, idx) => p && (
+                <button
+                  key={`phone-${idx}`}
+                  onClick={() => handleInteraction("phone", `tel:${p}`)}
+                  className="flex justify-between items-center w-full bg-gray-50 dark:bg-gray-800 p-2.5 rounded-2xl transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl glass-icon flex items-center justify-center text-white shadow-sm" style={{ background: `linear-gradient(135deg, ${themeHex}cc 0%, ${themeHex}e6 100%)` }}>
+                      <Phone className="w-4 h-4" />
                     </div>
-                    <div className="flex flex-col gap-1 text-left">
-                      {phones.map((p, idx) => p && (
-                        <button key={idx} onClick={() => handleInteraction("phone", `tel:${p}`)} className="text-xs font-bold text-gray-800 dark:text-gray-200 tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors" dir="ltr">
-                          {p}
-                        </button>
-                      ))}
-                    </div>
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">شماره موبایل</span>
                   </div>
-                )}
-              </div>
+                  <span className="text-xs font-bold text-gray-800 dark:text-gray-200 tracking-wider" dir="ltr">{p}</span>
+                </button>
+              ))}
+            </div>
 
-              {website && (
-                <>
-                  <hr className="border-gray-100 dark:border-gray-700 opacity-60 mt-4 mb-3 transition-colors" />
-                  <button onClick={() => handleInteraction("website", website)} className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-2xl py-3 flex justify-center items-center gap-2 text-[13px] font-bold transition-colors shadow-md">
-                    <i className="fa-solid fa-globe"></i> بازدید از سایت
-                  </button>
-                </>
-              )}
-            </section>
-          ) : null}
+            {website && (
+              <>
+                <hr className="border-gray-100 dark:border-gray-700 opacity-60 mt-4 mb-3 transition-colors" />
+                <button
+                  onClick={() => handleInteraction("website", website)}
+                  className="w-full text-white rounded-2xl py-3 flex justify-center items-center gap-2 text-[13px] font-bold transition-colors shadow-md hover:brightness-110"
+                  style={{ backgroundColor: themeHex }}
+                >
+                  <Globe className="w-4 h-4" />
+                  بازدید از سایت
+                </button>
+              </>
+            )}
+          </section>
 
-          {/* Branches Section */}
+          {/* Branch Section */}
           {branches && branches.length > 0 && (
-            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
               <div className="flex items-center gap-2 mb-4">
-                <i className="fa-solid fa-location-dot text-sm text-violet-500 dark:text-violet-400"></i>
+                <MapPin className="w-4 h-4" style={{ color: themeHex }} />
                 <h2 className="font-bold text-gray-800 dark:text-white text-sm">آدرس شعب ما</h2>
               </div>
-              
               <div className="flex gap-4 overflow-x-auto hide-scrollbar w-full snap-x pb-2">
                 {branches.map((b, idx) => (
-                  <div key={idx} className="carousel-item opacity-50 scale-90 snap-center shrink-0 w-[85%] bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 flex flex-col items-center transition-colors">
-                    <h3 className="font-bold text-violet-700 dark:text-violet-400 text-sm mb-2">{b.title || "شعبه"}</h3>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-5 text-center leading-relaxed">{b.address}</p>
-                    
+                  <div key={`branch-${idx}`} className="carousel-item opacity-100 scale-100 snap-center shrink-0 w-[85%] bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 flex flex-col items-center transition-colors">
+                    <h3 className="font-bold text-sm mb-2" style={{ color: themeHex }}>{b.title || "شعبه اصلی"}</h3>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-5 text-center leading-relaxed">
+                      {b.address || "آدرس ثبت نشده است"}
+                    </p>
                     <div className="flex justify-center gap-3 w-full">
                       {b.balad && (
                         <button onClick={() => handleInteraction("balad", b.balad)} className="flex flex-1 justify-center">
-                          <div className="w-16 h-16 rounded-xl bg-white dark:bg-gray-700 shadow-[0_8px_30px_-5px_rgba(0,0,0,0.05)] flex flex-col items-center justify-center gap-1 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
-                            <span className="text-xl">🗺️</span>
-                            <span className="text-[9px] font-medium text-gray-600 dark:text-gray-300">بلد</span>
+                          <div className="w-20 h-20 rounded-xl bg-white dark:bg-gray-700 shadow-card flex flex-col items-center justify-center gap-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <MapPin className="w-6 h-6 text-green-500" />
+                            <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300">بلد</span>
                           </div>
                         </button>
                       )}
                       {b.neshan && (
                         <button onClick={() => handleInteraction("neshan", b.neshan)} className="flex flex-1 justify-center">
-                          <div className="w-16 h-16 rounded-xl bg-white dark:bg-gray-700 shadow-[0_8px_30px_-5px_rgba(0,0,0,0.05)] flex flex-col items-center justify-center gap-1 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
-                            <span className="text-xl">📍</span>
-                            <span className="text-[9px] font-medium text-gray-600 dark:text-gray-300">نشان</span>
+                          <div className="w-20 h-20 rounded-xl bg-white dark:bg-gray-700 shadow-card flex flex-col items-center justify-center gap-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <MapPin className="w-6 h-6 text-blue-500" />
+                            <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300">نشان</span>
                           </div>
                         </button>
                       )}
                       {b.googleMaps && (
                         <button onClick={() => handleInteraction("googleMaps", b.googleMaps)} className="flex flex-1 justify-center">
-                          <div className="w-16 h-16 rounded-xl bg-white dark:bg-gray-700 shadow-[0_8px_30px_-5px_rgba(0,0,0,0.05)] flex flex-col items-center justify-center gap-1 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
-                            <span className="text-xl">G</span>
-                            <span className="text-[9px] font-medium text-gray-600 dark:text-gray-300">مپس</span>
+                          <div className="w-20 h-20 rounded-xl bg-white dark:bg-gray-700 shadow-card flex flex-col items-center justify-center gap-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <MapPin className="w-6 h-6 text-red-500" />
+                            <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300">گوگل مپ</span>
                           </div>
                         </button>
                       )}
@@ -255,29 +267,35 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
 
           {/* Social Media Section */}
           {socials && Object.keys(socials).length > 0 && (
-            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-violet-500 dark:bg-violet-400"></div>
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: themeHex }}></div>
                 <h2 className="font-bold text-gray-800 dark:text-white text-sm">ما را در شبکه‌های اجتماعی دنبال کنید</h2>
               </div>
-
-              <div className="flex gap-4 overflow-x-auto hide-scrollbar w-full px-2 snap-x py-2">
+              <div className="flex gap-4 overflow-x-auto hide-scrollbar w-full px-2 snap-x py-2 justify-center">
                 {Object.entries(socials).map(([key, val]) => {
                   if (!val) return null;
-                  
-                  let iconClass = "fa-solid fa-globe";
-                  let bgClass = "bg-gray-800 text-white";
+                  let iconComp = <Globe className="w-5 h-5 text-white" />;
                   let title = key;
+                  let btnClass = "bg-gray-800 text-white";
 
-                  if (key === "instagram") { iconClass = "fa-brands fa-instagram"; title = "اینستاگرام"; bgClass = "insta-gradient text-white"; }
-                  else if (key === "telegram") { iconClass = "fa-brands fa-telegram"; title = "تلگرام"; bgClass = "bg-[#0088cc] text-white"; }
-                  else if (key === "whatsapp") { iconClass = "fa-brands fa-whatsapp"; title = "واتساپ"; bgClass = "bg-[#25D366] text-white"; }
-                  else if (key === "youtube") { iconClass = "fa-brands fa-youtube"; title = "یوتیوب"; bgClass = "bg-red-600 text-white"; }
+                  if (key === "instagram") { iconComp = <Instagram className="w-5 h-5 text-white" />; title = "اینستاگرام"; btnClass = "insta-gradient"; }
+                  else if (key === "telegram") { iconComp = <Send className="w-5 h-5 text-white -rotate-45" />; title = "تلگرام"; btnClass = "bg-[#0088cc]"; }
+                  else if (key === "whatsapp") { iconComp = <Phone className="w-5 h-5 text-white" />; title = "واتساپ"; btnClass = "bg-[#25D366]"; }
+                  else if (key === "rubika") { iconComp = <CheckCircle2 className="w-5 h-5 text-gray-500 dark:text-gray-300" />; title = "روبیکا"; btnClass = "bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600"; }
+                  else if (key === "soroush") { iconComp = <AlertCircle className="w-5 h-5 text-white" />; title = "سروش"; btnClass = "bg-[#03A9F4]"; }
+                  else if (key === "bale") { iconComp = <MessageSquare className="w-5 h-5 text-white" />; title = "بله"; btnClass = "bg-[#2E86DE]"; }
+                  else if (key === "youtube") { iconComp = <Youtube className="w-5 h-5 text-white" />; title = "یوتیوب"; btnClass = "bg-[#FF0000]"; }
+                  else if (key === "aparat") { iconComp = <Play className="w-5 h-5 text-white" />; title = "آپارات"; btnClass = "bg-[#df0f50]"; }
 
                   return (
-                    <button key={key} onClick={() => handleInteraction(key, val)} className="flex flex-col items-center gap-2 snap-center shrink-0">
-                      <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform ${bgClass}`}>
-                        <i className={`${iconClass} text-xl`}></i>
+                    <button
+                      key={key}
+                      onClick={() => handleInteraction(key, val)}
+                      className="flex flex-col items-center gap-2 snap-center shrink-0 group"
+                    >
+                      <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-md group-hover:scale-105 transition-transform ${btnClass}`}>
+                        {iconComp}
                       </div>
                       <span className="text-[9px] font-medium text-gray-600 dark:text-gray-300">{title}</span>
                     </button>
@@ -289,27 +307,30 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
 
           {/* Products Section */}
           {products && products.length > 0 && (
-            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
               <div className="flex items-center gap-2 mb-1">
-                <i className="fa-solid fa-store text-violet-500 dark:text-violet-400 text-sm"></i>
+                <Store className="w-4 h-4" style={{ color: themeHex }} />
                 <h2 className="font-bold text-gray-800 dark:text-white text-sm">خدمات و محصولات ما</h2>
               </div>
-              
-              <div className="flex gap-4 overflow-x-auto hide-scrollbar w-full snap-x pb-4 pt-2">
-                {products.map((prod, idx) => (
-                  <button key={idx} onClick={() => handleInteraction("product", prod.link)} className="carousel-item opacity-50 scale-90 bg-white dark:bg-gray-800 rounded-2xl shadow-[0_8px_30px_-5px_rgba(0,0,0,0.05)] p-2 flex flex-col items-center snap-center shrink-0 w-44 border border-gray-100 dark:border-gray-700 transition-colors hover:opacity-100 hover:scale-95 duration-300">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-5">جدیدترین و بهترین خدمات منتخب ما</p>
+
+              <div ref={productsRef} className="flex gap-4 overflow-x-auto hide-scrollbar w-full snap-x pb-4">
+                {products.map((p, idx) => (
+                  <button
+                    key={`prod-${idx}`}
+                    onClick={() => p.link && handleInteraction("product", p.link)}
+                    className="carousel-item opacity-100 scale-100 bg-white dark:bg-gray-800 rounded-2xl shadow-card p-2 flex flex-col items-center snap-center shrink-0 w-44 border border-gray-100 dark:border-gray-700 transition-colors hover:scale-95 duration-300 text-right"
+                  >
                     <div className="w-full h-32 rounded-xl overflow-hidden mb-3 bg-gray-50 dark:bg-gray-900 relative">
-                      {prod.imageUrl ? (
-                        <img src={prod.imageUrl} alt={prod.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">بدون تصویر</div>
                       )}
                     </div>
-                    <h3 className="text-[11px] font-bold text-gray-800 dark:text-gray-100 mb-1">{prod.title}</h3>
-                    <p className="text-[9px] text-gray-400 dark:text-gray-500 text-center mb-2 line-clamp-2 px-1">{prod.description}</p>
-                    <p className="text-violet-600 dark:text-violet-400 font-bold text-[13px] mt-auto" dir="ltr">
-                      {prod.price || "توافقی"}
-                    </p>
+                    <h3 className="text-[11px] font-bold text-gray-800 dark:text-gray-100 mb-1 w-full truncate text-center">{p.title}</h3>
+                    <p className="text-[9px] text-gray-400 dark:text-gray-500 text-center mb-2 line-clamp-2 px-1 w-full">{p.description}</p>
+                    <p className="font-bold text-[13px] mt-auto" style={{ color: themeHex }} dir="ltr">{p.price || "توافقی"}</p>
                   </button>
                 ))}
               </div>
@@ -318,16 +339,17 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
 
           {/* Image Gallery Section */}
           {gallery && gallery.length > 0 && (
-            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
               <div className="flex items-center gap-2 mb-1">
-                <i className="fa-regular fa-images text-violet-500 dark:text-violet-400 text-sm"></i>
+                <ImageIcon className="w-4 h-4" style={{ color: themeHex }} />
                 <h2 className="font-bold text-gray-800 dark:text-white text-sm">گالری تصاویر</h2>
               </div>
-              
-              <div className="flex gap-3 overflow-x-auto hide-scrollbar w-full snap-x pb-2 pt-2">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-5">لحظاتی از استایل، کیفیت و رضایت مشتریان ما</p>
+
+              <div ref={galleryRef} className="flex gap-3 overflow-x-auto hide-scrollbar w-full snap-x pb-2">
                 {gallery.map((imgUrl, idx) => (
-                  <div key={idx} className="carousel-item opacity-50 scale-90 shrink-0 w-[75%] h-40 rounded-2xl overflow-hidden snap-center shadow-md relative">
-                    <img src={imgUrl} className="w-full h-full object-cover" alt={`تصویر ${idx + 1}`} referrerPolicy="no-referrer" />
+                  <div key={`gallery-${idx}`} className="carousel-item opacity-100 scale-100 shrink-0 w-[75%] h-40 rounded-2xl overflow-hidden snap-center shadow-md relative">
+                    <img src={imgUrl} className="w-full h-full object-cover" alt={`گالری ${idx + 1}`} referrerPolicy="no-referrer" />
                   </div>
                 ))}
               </div>
@@ -338,25 +360,22 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
           {workingDays && (
             <section className="flex flex-col items-center pt-2">
               <div className="flex items-center gap-2 mb-4">
-                <i className="fa-regular fa-clock text-violet-500 dark:text-violet-400 text-sm"></i>
+                <Clock className="w-4 h-4" style={{ color: themeHex }} />
                 <h2 className="font-bold text-gray-800 dark:text-white text-sm">ساعات کاری</h2>
               </div>
 
-              <div className="w-full bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 transition-colors">
+              <div className="w-full bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 transition-colors">
                 <div className="flex flex-col space-y-3 text-[13px] font-medium text-gray-600 dark:text-gray-300">
                   {Object.entries(workingDays).map(([day, val]) => (
-                    <div key={day} className="flex justify-between items-center border-b border-gray-50 dark:border-gray-800 pb-2 transition-colors last:border-0">
+                    <div key={day} className="flex justify-between items-center border-b border-gray-50 dark:border-gray-800 pb-2 transition-colors last:border-0 last:pb-0">
                       <span className="w-16">{day}</span>
+                      <span dir="ltr" className="text-gray-500 dark:text-gray-400">
+                        {val.isOpen && !val.isClosed ? `${val.openTime} - ${val.closeTime}` : "تعطیل"}
+                      </span>
                       {val.isOpen && !val.isClosed ? (
-                        <>
-                          <span dir="ltr" className="text-gray-500 dark:text-gray-400">{val.openTime} - {val.closeTime}</span>
-                          <span className="bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 px-3 py-0.5 rounded-full text-[10px]">باز</span>
-                        </>
+                        <span className="bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 px-3 py-0.5 rounded-full text-[10px]">باز</span>
                       ) : (
-                        <>
-                          <span className="text-gray-500 dark:text-gray-400">تعطیل</span>
-                          <span className="bg-red-100 dark:bg-red-900/40 text-red-500 dark:text-red-400 px-2.5 py-0.5 rounded-full text-[10px]">تعطیل</span>
-                        </>
+                        <span className="bg-red-100 dark:bg-red-900/40 text-red-500 dark:text-red-400 px-2.5 py-0.5 rounded-full text-[10px]">تعطیل</span>
                       )}
                     </div>
                   ))}
@@ -366,25 +385,66 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
           )}
 
           {/* Bottom Status */}
-          <div className="w-full bg-[#5b21b6] dark:bg-[#3b0764] rounded-full p-1.5 flex justify-between items-center shadow-md mb-8 mt-4 transition-colors">
-            <div className={`${dayStatus.bg} ${dayStatus.color} px-4 py-2 rounded-full text-[11px] font-bold flex items-center gap-2 shadow-sm`}>
-              {dayStatus.status && <div className="w-2 h-2 bg-green-700 dark:bg-green-400 rounded-full animate-pulse"></div>}
-              وضعیت: {dayStatus.text}
+          <div
+            className="w-full rounded-full p-1.5 flex justify-between items-center shadow-md mb-8 mt-4 transition-colors"
+            style={{ backgroundColor: themeHex }}
+          >
+            <div className={`px-4 py-2 rounded-full text-[11px] font-bold flex items-center gap-2 shadow-sm ${dayStatus.text.includes("تعطیل") ? "bg-red-100 dark:bg-red-900/40 text-red-900 dark:text-red-100" : "bg-[#86efac] dark:bg-green-900 text-green-900 dark:text-green-100"}`}>
+              <div className={`w-2 h-2 rounded-full animate-pulse ${dayStatus.text.includes("تعطیل") ? "bg-red-500" : "bg-green-700 dark:bg-green-400"}`}></div>
+              وضعیت: {dayStatus.text.includes("تعطیل") ? "تعطیل" : "باز"}
             </div>
             <span className="text-white dark:text-gray-200 text-xs font-bold pl-4">
-              {dayStatus.status ? "هم‌اکنون فروشگاه باز است" : "در حال حاضر تعطیل است"}
+              {dayStatus.text.includes("تعطیل") ? "هم‌اکنون فروشگاه تعطیل است" : "هم‌اکنون فروشگاه باز است"}
             </span>
           </div>
+
         </main>
-        
-        <footer className="mt-4 w-full text-center px-4 pb-8 space-y-2 select-none">
+
+        <footer className="mt-12 w-full text-center px-4 pb-4 space-y-2 select-none relative z-10">
           <p className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 leading-relaxed font-medium">
             تمامی حق انتشار و استفاده از این کارت برای پلتفرم <span className="font-bold text-gray-500 dark:text-gray-400">کارتت</span> می‌باشد.
+            هر گونه کپی‌برداری و یا استفاده غیر قانونی پیگرد قانونی دارد.
           </p>
-          <p className="text-[11px] font-bold text-violet-600 dark:text-violet-400">
+          <p className="text-[11px] font-bold" style={{ color: themeHex }}>
             با کارتت رایگان بسازید
           </p>
         </footer>
+
+        {/* Template-specific Aesthetic Adjustments */}
+        {design?.template === "classic" && (
+          <style dangerouslySetInnerHTML={{ __html: `
+            @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Playfair+Display:ital,wght@0,600;1,400&display=swap');
+            .template-classic {
+              font-family: 'Playfair Display', 'Georgia', serif !important;
+              background-color: ${isDark ? "#0f111a" : "#faf6f0"} !important;
+              color: ${isDark ? "#eae0cc" : "#2d2012"} !important;
+            }
+            .template-classic h1, .template-classic h2, .template-classic h3, .template-classic h4 {
+              font-family: 'Cinzel', 'Playfair Display', serif !important;
+              color: ${isDark ? "#dfb841" : "#997316"} !important;
+              letter-spacing: 0.04em !important;
+              text-transform: uppercase !important;
+              font-weight: 850 !important;
+            }
+          `}} />
+        )}
+        {design?.template === "minimalist" && (
+          <style dangerouslySetInnerHTML={{ __html: `
+            @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap');
+            .template-minimalist {
+              font-family: 'Space Grotesk', 'Inter', sans-serif !important;
+              background-color: ${isDark ? "#080808" : "#fafafa"} !important;
+              color: ${isDark ? "#eeeeee" : "#111111"} !important;
+              font-weight: 300 !important;
+            }
+            .template-minimalist h1, .template-minimalist h2, .template-minimalist h3, .template-minimalist h4 {
+              font-weight: 600 !important;
+              letter-spacing: -0.04em !important;
+              color: ${isDark ? "#ffffff" : "#000000"} !important;
+              font-family: 'Space Grotesk', sans-serif !important;
+            }
+          `}} />
+        )}
       </div>
     </div>
   );
