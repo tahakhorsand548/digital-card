@@ -7,7 +7,14 @@ import {
 import { CardData } from "../types";
 import { apiFetch } from "../utils/api";
 import baladIcon from './img card/logos/images.png';
-import insta from './img card/logos/instagram.png';
+import instagramLogo from "./img card/logos/instagram.png";
+import telegramLogo from "./img card/logos/Telegram.png";
+import whatsappLogo from "./img card/logos/whatsapp.png";
+import rubikaLogo from "./img card/logos/rubika.png";
+import soroushLogo from "./img card/logos/Soroush.png";
+import baleLogo from "./img card/logos/bale.png";
+import youtubeLogo from "./img card/logos/Youtube.png";
+import aparatLogo from "./img card/logos/aparat.png";
 interface CardPreviewProps {
   data: CardData;
   username: string;
@@ -329,14 +336,46 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                     let title = key;
                     let btnClass = "bg-gray-800 text-white";
 
-                    if (key === "instagram") { iconComp = <Instagram className="w-5 h-5 text-white" />; title = "اینستاگرام"; btnClass = "insta-gradient"; }
-                    else if (key === "telegram") { iconComp = <Send className="w-5 h-5 text-white -rotate-45" />; title = "تلگرام"; btnClass = "bg-[#0088cc]"; }
-                    else if (key === "whatsapp") { iconComp = <Phone className="w-5 h-5 text-white" />; title = "واتساپ"; btnClass = "bg-[#25D366]"; }
-                    else if (key === "rubika") { iconComp = <CheckCircle2 className={`w-5 h-5 ${mode("text-gray-500", "text-gray-300")}`} />; title = "روبیکا"; btnClass = mode("bg-white border border-gray-100", "bg-gray-700 border border-gray-600"); }
-                    else if (key === "soroush") { iconComp = <AlertCircle className="w-5 h-5 text-white" />; title = "سروش"; btnClass = "bg-[#03A9F4]"; }
-                    else if (key === "bale") { iconComp = <MessageSquare className="w-5 h-5 text-white" />; title = "بله"; btnClass = "bg-[#2E86DE]"; }
-                    else if (key === "youtube") { iconComp = <Youtube className="w-5 h-5 text-white" />; title = "یوتیوب"; btnClass = "bg-[#FF0000]"; }
-                    else if (key === "aparat") { iconComp = <Play className="w-5 h-5 text-white" />; title = "آپارات"; btnClass = "bg-[#df0f50]"; }
+if (key === "instagram") {
+  iconComp = <img src={instagramLogo} alt="Instagram" className="w-6 h-6 object-contain" />;
+  title = "اینستاگرام";
+  btnClass = "bg-white";
+}
+else if (key === "telegram") {
+  iconComp = <img src={telegramLogo} alt="Telegram" className="w-6 h-6 object-contain" />;
+  title = "تلگرام";
+  btnClass = "bg-white";
+}
+else if (key === "whatsapp") {
+  iconComp = <img src={whatsappLogo} alt="WhatsApp" className="w-6 h-6 object-contain" />;
+  title = "واتساپ";
+  btnClass = "bg-white";
+}
+else if (key === "rubika") {
+  iconComp = <img src={rubikaLogo} alt="Rubika" className="w-6 h-6 object-contain" />;
+  title = "روبیکا";
+  btnClass = "bg-white";
+}
+else if (key === "soroush") {
+  iconComp = <img src={soroushLogo} alt="Soroush" className="w-6 h-6 object-contain" />;
+  title = "سروش";
+  btnClass = "bg-white";
+}
+else if (key === "bale") {
+  iconComp = <img src={baleLogo} alt="Bale" className="w-6 h-6 object-contain" />;
+  title = "بله";
+  btnClass = "bg-white";
+}
+else if (key === "youtube") {
+  iconComp = <img src={youtubeLogo} alt="YouTube" className="w-6 h-6 object-contain" />;
+  title = "یوتیوب";
+  btnClass = "bg-white";
+}
+else if (key === "aparat") {
+  iconComp = <img src={aparatLogo} alt="Aparat" className="w-6 h-6 object-contain" />;
+  title = "آپارات";
+  btnClass = "bg-white";
+}
 
                     return (
                       <button
