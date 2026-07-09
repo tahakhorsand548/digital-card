@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { CardData } from "../types";
 import { apiFetch } from "../utils/api";
+import baladIcon from './img card/logos/images.png';
 
 interface CardPreviewProps {
   data: CardData;
@@ -280,12 +281,15 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                       </p>
                       <div className="flex justify-center gap-3 w-full">
                         {b.balad && (
-                          <button onClick={() => handleInteraction("balad", b.balad)} className="flex flex-1 justify-center">
-                            <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
-                              <MapPin className="w-6 h-6 text-green-500" />
-                              <span className={`text-[10px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>بلد</span>
-                            </div>
-                          </button>
+                      <button onClick={() => handleInteraction("balad", b.balad)} className="flex flex-1 justify-center">
+                        <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors overflow-hidden ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
+                          <img 
+                            src={baladIcon} 
+                            alt="بلد" 
+                            className="w-full h-full object-cover" 
+                          />
+                        </div>
+                      </button>
                         )}
                         {b.neshan && (
                           <button onClick={() => handleInteraction("neshan", b.neshan)} className="flex flex-1 justify-center">
