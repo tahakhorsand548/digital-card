@@ -14,7 +14,7 @@ import rubikaLogo from "./img card/logos/rubika.png";
 import soroushLogo from "./img card/logos/Soroush.png";
 import baleLogo from "./img card/logos/bale.png";
 import youtubeLogo from "./img card/logos/Youtube.png";
-import aparatLogo from "./img card/logos/aparat.png";
+import aparatLogo from "./img card/logos/aparat.jpg";
 interface CardPreviewProps {
   data: CardData;
   username: string;
