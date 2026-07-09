@@ -1,11 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { 
-  Phone, Globe, MapPin, MessageSquare, Clock, ArrowLeft, ArrowRight,
-  Instagram, Send, CreditCard, Play, Youtube, CheckCircle2, AlertCircle
-} from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
 import { CardData } from "../types";
 import { apiFetch } from "../utils/api";
-import MinimalistCard from "./MinimalistCard";
 
 interface CardPreviewProps {
   data: CardData;
@@ -32,32 +27,8 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     design
   } = data;
 
-  const themeHex = design?.colorTheme || "#3B82F6";
-  const isDark = design?.isDark ?? false;
-
-  // Gallery Sliders State
-  const [activeGalleryIdx, setActiveGalleryIdx] = useState(0);
-  const [activeProductIdx, setActiveProductIdx] = useState(0);
-
-  // Auto Scroll Gallery every 3 seconds
-  useEffect(() => {
-    if (gallery && gallery.length > 1) {
-      const interval = setInterval(() => {
-        setActiveGalleryIdx((prev) => (prev + 1) % gallery.length);
-      }, 3000);
-      return () => clearInterval(interval);
-    }
-  }, [gallery]);
-
-  // Auto Scroll Products every 3 seconds
-  useEffect(() => {
-    if (products && products.length > 1) {
-      const interval = setInterval(() => {
-        setActiveProductIdx((prev) => (prev + 1) % products.length);
-      }, 3000);
-      return () => clearInterval(interval);
-    }
-  }, [products]);
+  // Dark mode state - Initialized from data, but toggleable by user
+  const [isDarkMode, setIsDarkMode] = useState(design?.isDark ?? false);
 
   // Click Tracker for Live Cards
   const handleInteraction = async (type: string, url?: string) => {
@@ -72,449 +43,349 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     }
   };
 
-  // ─── طرح مینیمال سفارشی — کاملاً مستقل از بقیه‌ی templateها ───────────────
-  if (design?.template === "minimalist") {
-    return <MinimalistCard data={data} username={username} isPreview={isPreview} onInteraction={handleInteraction} />;
-  }
-
   const getDayStatus = () => {
     const daysWeek = ["جمعه", "شنبه", "یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنجشنبه"];
     const todayStr = daysWeek[new Date().getDay()];
     const todaySchedule = workingDays?.[todayStr];
+    
     if (!todaySchedule || !todaySchedule.isOpen || todaySchedule.isClosed) {
-      return { text: "امروز تعطیل است", color: "text-red-500" };
+      return { text: "تعطیل", color: "text-red-500 dark:text-red-400", bg: "bg-red-100 dark:bg-red-900/40", status: false };
     }
-    return { text: `باز است (ساعت کاری: ${todaySchedule.openTime} الی ${todaySchedule.closeTime})`, color: "text-emerald-500" };
+    return { text: "باز", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-900/40", status: true };
   };
 
   const dayStatus = getDayStatus();
 
+  // Intersection Observer for Carousel Snap Effect
+  const carouselRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          entry.target.classList.remove('opacity-50', 'scale-90');
+          entry.target.classList.add('opacity-100', 'scale-100');
+        } else {
+          entry.target.classList.add('opacity-50', 'scale-90');
+          entry.target.classList.remove('opacity-100', 'scale-100');
+        }
+      });
+    }, { threshold: 0.5 });
+
+    const elements = document.querySelectorAll('.carousel-item');
+    elements.forEach(item => observer.observe(item));
+
+    return () => observer.disconnect();
+  }, [gallery, products, branches]);
+
   return (
-    <div 
-      className={`w-full min-h-screen font-sans transition-colors duration-300 card-preview-scope template-${design?.template || "modern"} ${
-        isDark ? "bg-slate-900 text-slate-100" : "bg-white text-slate-800"
-      }`}
-      style={{ direction: "rtl" }}
-    >
-      {/* 1. Brand Banner Header */}
-      <div className="relative w-full h-44 bg-slate-800 overflow-hidden">
-        {bgImageUrl ? (
+    <div className={`${isDarkMode ? 'dark' : ''} font-sans`}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-icon {
+          background: linear-gradient(135deg, rgba(167, 139, 250, 0.8) 0%, rgba(124, 58, 237, 0.9) 100%);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.4);
+          box-shadow: 0 4px 15px rgba(124, 58, 237, 0.2);
+        }
+        .insta-gradient { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+        .carousel-item { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+      `}} />
+
+      {/* Mobile Container */}
+      <div className="max-w-md mx-auto bg-[#fafaff] dark:bg-[#0f172a] min-h-screen relative overflow-hidden shadow-2xl transition-colors duration-300 text-gray-800 dark:text-gray-200 antialiased" style={{ direction: "rtl" }}>
+        
+        {/* Header Section */}
+        <header className="relative pt-4 pb-6 px-4 shadow-sm min-h-[350px] overflow-hidden">
           <img 
-            src={bgImageUrl} 
-            alt="برند" 
-            className="w-full h-full object-cover opacity-85 transition-transform duration-500 hover:scale-105"
+            src={bgImageUrl || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=800&q=80"} 
+            alt="پس‌زمینه"
+            className="absolute inset-0 w-full h-full object-cover object-center opacity-50 dark:opacity-30 transition-opacity z-0"
             referrerPolicy="no-referrer"
           />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-            <span className="text-slate-500 text-sm">بدون تصویر پس‌زمینه</span>
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-      </div>
-
-      {/* 2. Brand Identity Block */}
-      <div className="px-6 -mt-16 relative z-10 text-center pb-4">
-        <div className="inline-block relative">
-          <div className="w-28 h-28 rounded-2xl overflow-hidden bg-slate-900 border-4 border-slate-950 shadow-xl mx-auto flex items-center justify-center">
-            {logoUrl ? (
-              <img 
-                src={logoUrl} 
-                alt="لوگو" 
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <span className="text-3xl font-bold text-white flex items-center justify-center">
-                {businessName ? businessName.charAt(0) : "B"}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <h1 className="text-2xl font-extrabold mt-3 tracking-tight">
-          {businessName || "نام کسب و کار شما"}
-        </h1>
-        {brandManager && (
-          <p className="text-sm font-medium opacity-65 mt-1">
-            با مدیریت {brandManager}
-          </p>
-        )}
-        {slogan && (
-          <p 
-            className="text-sm font-semibold tracking-wide mt-2 inline-block px-3 py-1 rounded-full text-white"
-            style={{ backgroundColor: themeHex }}
-          >
-            {slogan}
-          </p>
-        )}
-        {description && (
-          <p className="text-sm leading-relaxed mt-4 max-w-sm mx-auto opacity-80 px-2 line-clamp-4">
-            {description}
-          </p>
-        )}
-      </div>
-
-      <hr className={`mx-6 my-4 border-t ${isDark ? "border-slate-800" : "border-slate-100"}`} />
-
-      {/* 3. Interactive Quick Call & Links */}
-      <div className="px-6 space-y-3">
-        {/* Web Link */}
-        {website && (
-          <button 
-            onClick={() => handleInteraction("website", website)}
-            className="w-full py-3 px-4 rounded-xl font-bold flex items-center justify-between shadow-md transition-all text-white scale-98 active:scale-95"
-            style={{ backgroundColor: themeHex }}
-          >
-            <div className="flex items-center gap-2">
-              <Globe className="w-5 h-5" />
-              <span>وب سایت رسمی برند</span>
-            </div>
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* Mobile Phones List */}
-        {phones && phones.length > 0 && phones.map((p, idx) => (
-          p && (
-            <button 
-              key={`phone-${idx}`}
-              onClick={() => handleInteraction("phone", `tel:${p}`)}
-              className={`w-full py-3 px-4 rounded-xl font-semibold flex items-center justify-between transition-all border ${
-                isDark 
-                  ? "bg-slate-800/80 border-slate-700/60 hover:bg-slate-800 text-white" 
-                  : "bg-slate-50 border-slate-200/80 hover:bg-slate-100 text-slate-800"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Phone className="w-5 h-5 text-emerald-500" />
-                <span>تماس مستقیم {idx === 0 ? "" : `(${idx + 1})`}</span>
-              </div>
-              <span className="font-mono text-sm tracking-widest">{p}</span>
-            </button>
-          )
-        ))}
-
-        {/* Fixed Landlines */}
-        {landlines && landlines.length > 0 && landlines.map((l, idx) => (
-          l && (
-            <button 
-              key={`landline-${idx}`}
-              onClick={() => handleInteraction("landline", `tel:${l}`)}
-              className={`w-full py-3 px-4 rounded-xl font-semibold flex items-center justify-between transition-all border ${
-                isDark 
-                  ? "bg-slate-800/80 border-slate-700/60 hover:bg-slate-800 text-white" 
-                  : "bg-slate-50 border-slate-200/80 hover:bg-slate-100 text-slate-800"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Phone className="w-5 h-5 text-slate-400" />
-                <span>شماره تماس ثابت {idx === 0 ? "" : `(${idx + 1})`}</span>
-              </div>
-              <span className="font-mono text-sm tracking-widest">{l}</span>
-            </button>
-          )
-        ))}
-      </div>
-
-      {/* 4. Branch Branches & Navigation Map Links */}
-      {branches && branches.length > 0 && (
-        <div className="px-6 mt-6 space-y-4">
-          <h3 className="text-base font-bold flex items-center gap-2">
-            <span className="w-1.5 h-3.5 rounded-full" style={{ backgroundColor: themeHex }}></span>
-            شعب و آدرس های حضوری
-          </h3>
-          {branches.map((b, idx) => (
-            <div 
-              key={`branch-${idx}`} 
-              className={`p-4 rounded-xl border ${
-                isDark ? "bg-slate-800/40 border-slate-800" : "bg-slate-50 border-slate-100"
-              }`}
-            >
-              <h4 className="font-bold text-sm text-slate-200" style={{ color: isDark ? "#f1f5f9" : "#334155" }}>
-                📍 {b.title || "شعبه اصلی"}
-              </h4>
-              <p className="text-xs leading-relaxed opacity-75 mt-1.5">
-                {b.address || "آدرس ثبت نشده است"}
-              </p>
-
-              {/* Map Router buttons if they exist */}
-              <div className="grid grid-cols-3 gap-2 mt-4">
-                {b.googleMaps && (
-                  <button 
-                    onClick={() => handleInteraction("googleMaps", b.googleMaps)}
-                    className="py-2 px-1 rounded-lg text-[10px] font-bold flex flex-col items-center justify-center gap-1.5 transition bg-[#4285F4]/10 text-[#4285F4] border border-[#4285F4]/20 hover:bg-[#4285F4]/20"
-                  >
-                    <span className="text-xs font-mono">Google Maps</span>
-                  </button>
-                )}
-                {b.neshan && (
-                  <button 
-                    onClick={() => handleInteraction("neshan", b.neshan)}
-                    className="py-2 px-1 rounded-lg text-[10px] font-bold flex flex-col items-center justify-center gap-1.5 transition bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20"
-                  >
-                    <span>نقشه نشان</span>
-                  </button>
-                )}
-                {b.balad && (
-                  <button 
-                    onClick={() => handleInteraction("balad", b.balad)}
-                    className="py-2 px-1 rounded-lg text-[10px] font-bold flex flex-col items-center justify-center gap-1.5 transition bg-orange-500/10 text-orange-500 border border-orange-500/20 hover:bg-orange-500/20"
-                  >
-                    <span>نقشه بلد</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 5. Image Slide Gallery (Max 5 images, slides auto or manual dot clicks) */}
-      {gallery && gallery.length > 0 && (
-        <div className="px-6 mt-6 space-y-3">
-          <h3 className="text-base font-bold flex items-center gap-2">
-            <span className="w-1.5 h-3.5 rounded-full" style={{ backgroundColor: themeHex }}></span>
-            گالری تصاویر برند
-          </h3>
-
-          <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-900 group shadow-lg">
-            <img 
-              src={gallery[activeGalleryIdx]} 
-              alt={`گالری ${activeGalleryIdx + 1}`} 
-              className="w-full h-full object-cover transition-all duration-700 ease-in-out"
-              referrerPolicy="no-referrer"
-            />
-            
-            {/* Gallery Navigation Overlay buttons */}
-            <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button 
-                onClick={() => setActiveGalleryIdx((prev) => (prev - 1 + gallery.length) % gallery.length)}
-                className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-white text-xs hover:bg-black/90"
-              >
-                <ArrowRight className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setActiveGalleryIdx((prev) => (prev + 1) % gallery.length)}
-                className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-white text-xs hover:bg-black/90"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Slider Dots indicators */}
-            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-              {gallery.map((_, idx) => (
-                <button 
-                  key={`dot-${idx}`}
-                  onClick={() => setActiveGalleryIdx(idx)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    idx === activeGalleryIdx ? "w-4" : "w-1.5"
-                  }`}
-                  style={{ backgroundColor: idx === activeGalleryIdx ? themeHex : "rgba(255,255,255,0.4)" }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 6. Products Scroll Carousel Slider */}
-      {products && products.length > 0 && (
-        <div className="px-6 mt-6 space-y-3">
-          <h3 className="text-base font-bold flex items-center gap-2">
-            <span className="w-1.5 h-3.5 rounded-full" style={{ backgroundColor: themeHex }}></span>
-            محصولات و خدمات
-          </h3>
-
-          <div className="relative rounded-2xl overflow-hidden shadow-lg border border-slate-800/10">
-            <div className={`p-4 ${isDark ? "bg-slate-800/60" : "bg-slate-50"} flex flex-col justify-between aspect-[1.1]`}>
-              <div className="aspect-[1.8] w-full rounded-lg overflow-hidden bg-slate-900 border border-slate-700/15">
-                {products[activeProductIdx]?.imageUrl ? (
-                  <img 
-                    src={products[activeProductIdx].imageUrl} 
-                    alt={products[activeProductIdx].title} 
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-slate-850 flex items-center justify-center text-slate-600 text-xs text-center">بغیر تصویر</div>
-                )}
-              </div>
-
-              <div className="mt-3 flex-1 flex flex-col justify-between">
-                <div>
-                  <h4 className="font-extrabold text-sm">{products[activeProductIdx]?.title}</h4>
-                  <p className="text-xs opacity-75 mt-1 line-clamp-2">{products[activeProductIdx]?.description}</p>
-                </div>
-
-                <div className="mt-2 flex items-center justify-between border-t border-slate-700/15 pt-2">
-                  <span className="text-xs font-black tracking-wide" style={{ color: themeHex }}>
-                    {products[activeProductIdx]?.price || "توافقی"}
-                  </span>
-                  
-                  {products[activeProductIdx]?.link && (
-                    <button 
-                      onClick={() => handleInteraction("product", products[activeProductIdx].link)}
-                      className="py-1 px-3 rounded-lg text-[10px] font-bold text-white transition hover:brightness-110 flex items-center gap-1"
-                      style={{ backgroundColor: themeHex }}
-                    >
-                      <span>خرید و جزییات</span>
-                      <ArrowLeft className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Slider Dots indicators */}
-            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
-              {products.map((_, idx) => (
-                <button 
-                  key={`pdot-${idx}`}
-                  onClick={() => setActiveProductIdx(idx)}
-                  className={`h-1 rounded-full transition-all ${
-                    idx === activeProductIdx ? "w-3" : "w-1"
-                  }`}
-                  style={{ backgroundColor: idx === activeProductIdx ? themeHex : "rgba(255,255,255,0.3)" }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 7. Working Hours Calendar section */}
-      {workingDays && (
-        <div className="px-6 mt-6 space-y-3">
-          <h3 className="text-base font-bold flex items-center gap-2">
-            <span className="w-1.5 h-3.5 rounded-full" style={{ backgroundColor: themeHex }}></span>
-            ساعات کاری و فعالیت
-          </h3>
-
-          <div className={`p-4 rounded-xl border text-xs space-y-2 ${
-            isDark ? "bg-slate-800/40 border-slate-800" : "bg-slate-50 border-slate-100"
-          }`}>
-            <div className="flex items-center gap-2 font-bold mb-3">
-              <Clock className="w-4 h-4 text-[#3B82F6]" style={{ color: themeHex }} />
-              <span className={dayStatus.color}>{dayStatus.text}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-y-2 text-slate-300">
-              {Object.entries(workingDays).map(([day, val]) => (
-                <div key={day} className="flex justify-between items-center pl-4 border-r border-slate-700/10 pr-2">
-                  <span className={`font-semibold ${isDark ? "text-slate-200" : "text-slate-700"}`}>{day} :</span>
-                  <span className={`font-mono font-medium ${val.isOpen && !val.isClosed ? "text-emerald-500" : "text-red-400"}`}>
-                    {val.isOpen && !val.isClosed ? `${val.openTime} تا ${val.closeTime}` : "تعطیل"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 8. Web & Social Media Section */}
-      <div className="px-6 py-6 mt-4 pb-12">
-        <h3 className="text-base font-bold flex items-center gap-2 mb-4">
-          <span className="w-1.5 h-3.5 rounded-full" style={{ backgroundColor: themeHex }}></span>
-          شبکه های اجتماعی ما
-        </h3>
-
-        <div className="flex flex-wrap items-center justify-center gap-4 py-2">
-          {Object.entries(socials || {}).map(([key, val]) => {
-            if (!val) return null;
-            let iconComp = <Globe className="w-5 h-5" />;
-            let title = key;
-            let themeBg = "bg-slate-800";
-
-            if (key === "instagram") {
-              iconComp = <Instagram className="w-5 h-5 text-pink-500" />;
-              title = "اینستاگرام";
-              themeBg = "bg-pink-500/10";
-            } else if (key === "telegram") {
-              iconComp = <Send className="w-5 h-5 text-sky-400 -rotate-45" />;
-              title = "تلگرام";
-              themeBg = "bg-sky-400/10";
-            } else if (key === "whatsapp") {
-              iconComp = <Phone className="w-5 h-5 text-green-500" />;
-              title = "واتساپ";
-              themeBg = "bg-green-500/10";
-            } else if (key === "youtube") {
-              iconComp = <Youtube className="w-5 h-5 text-red-500" />;
-              title = "یوتیوب";
-              themeBg = "bg-red-500/10";
-            } else if (key === "aparat") {
-              iconComp = <Play className="w-5 h-5 text-rose-500" />;
-              title = "آپارات";
-              themeBg = "bg-rose-500/10";
-            } else if (key === "bale") {
-              iconComp = <MessageSquare className="w-5 h-5 text-[#2E86DE]" />;
-              title = "بله";
-              themeBg = "bg-blue-500/10";
-            } else if (key === "rubika") {
-              iconComp = <CheckCircle2 className="w-5 h-5 text-amber-500" />;
-              title = "روبیکا";
-              themeBg = "bg-amber-500/10";
-            } else if (key === "soroush") {
-              iconComp = <AlertCircle className="w-5 h-5 text-indigo-400" />;
-              title = "سروش";
-              themeBg = "bg-indigo-500/10";
-            }
-
-            return (
-              <button
-                key={key}
-                onClick={() => handleInteraction(key, val)}
-                className={`flex flex-col items-center justify-center gap-1.5 w-16 h-16 rounded-xl hover:scale-105 active:scale-95 transition-all border border-slate-700/10 ${themeBg}`}
-              >
-                {iconComp}
-                <span className="text-[9px] font-bold opacity-80">{title}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Template-specific Aesthetic Adjustments */}
-      {design?.template === "classic" && (
-        <style dangerouslySetInnerHTML={{ __html: `
-          @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Playfair+Display:ital,wght@0,600;1,400&display=swap');
+          <div className="absolute inset-0 bg-white/30 dark:bg-black/40 transition-colors z-0"></div>
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#fafaff] dark:from-[#0f172a] to-transparent z-0 transition-colors duration-300"></div>
           
-          .template-classic {
-            font-family: 'Playfair Display', 'Georgia', serif !important;
-            background-color: ${isDark ? "#0f111a" : "#faf6f0"} !important;
-            color: ${isDark ? "#eae0cc" : "#2d2012"} !important;
-          }
-          .template-classic h1, 
-          .template-classic h2, 
-          .template-classic h3, 
-          .template-classic h4 {
-            font-family: 'Cinzel', 'Playfair Display', serif !important;
-            color: ${isDark ? "#dfb841" : "#997316"} !important;
-            letter-spacing: 0.04em !important;
-            text-transform: uppercase !important;
-            font-weight: 850 !important;
-          }
-          .template-classic button, 
-          .template-classic .rounded-xl, 
-          .template-classic .rounded-2xl,
-          .template-classic .rounded-[24px] {
-            border-radius: 4px !important;
-            border: 3px double ${isDark ? "#dfb841" : "#997316"} !important;
-            font-family: 'Cinzel', 'Playfair Display', serif !important;
-            background-color: ${isDark ? "#161926" : "#ffffff"} !important;
-            color: ${isDark ? "#eae0cc" : "#2d2012"} !important;
-            box-shadow: none !important;
-          }
-          .template-classic hr {
-            border: none !important;
-            height: 3px !important;
-            background: repeating-linear-gradient(90deg, transparent, transparent 4px, ${isDark ? "#dfb841" : "#997316"} 4px, ${isDark ? "#dfb841" : "#997316"} 8px) !important;
-            margin: 20px 0 !important;
-          }
-        `}} />
-      )}
+          <div className="flex justify-end items-center relative z-10">
+            <button 
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="w-9 h-9 bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm text-gray-700 dark:text-gray-300 hover:scale-105 transition-transform"
+            >
+              <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'} text-sm`}></i>
+            </button>
+          </div>
+          
+          <div className="flex flex-col items-center mt-2 relative z-10">
+            <div className="w-24 h-24 mt-4 mb-1 flex items-center justify-center overflow-hidden bg-white/10 backdrop-blur-sm rounded-full shadow-lg border-2 border-white/20">
+              {logoUrl ? (
+                <img src={logoUrl} alt="لوگو" className="w-full h-full object-contain p-2" referrerPolicy="no-referrer" />
+              ) : (
+                <span className="text-4xl font-bold text-gray-800 dark:text-white">
+                  {businessName ? businessName.charAt(0) : "B"}
+                </span>
+              )}
+            </div>
+
+            <h1 className="text-3xl text-center font-extrabold text-gray-900 dark:text-white mb-1 drop-shadow-md">
+              {businessName || "نام کسب و کار"}
+            </h1>
+
+            {brandManager && (
+              <p className="text-xs text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-1 font-bold bg-white/60 dark:bg-gray-800/60 px-3 py-1 rounded-full backdrop-blur-sm shadow-sm transition-colors">
+                مدیریت: <span className="text-violet-700 dark:text-violet-400">{brandManager}</span>
+              </p>
+            )}
+
+            <div className="text-center px-3 space-y-2 mt-2 drop-shadow-md">
+              {slogan && (
+                <p className="text-violet-800 dark:text-violet-300 font-extrabold text-[13px]">{slogan}</p>
+              )}
+              {description && (
+                <p className="text-xs text-gray-800 dark:text-gray-300 leading-relaxed font-bold">
+                  {description}
+                </p>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content Area */}
+        <main className="px-4 py-4 space-y-6 relative z-10">
+          
+          {/* Contact Info Card */}
+          {(phones?.length || landlines?.length || website) ? (
+            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 transition-colors">
+              <div className="flex flex-col space-y-2.5">
+                
+                {landlines && landlines.length > 0 && (
+                  <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2.5 rounded-2xl transition-colors">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl glass-icon flex items-center justify-center text-white shadow-sm">
+                        <i className="fa-solid fa-phone-flip text-[10px]"></i>
+                      </div>
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">تلفن ثابت</span>
+                    </div>
+                    <div className="flex flex-col gap-1 text-left">
+                      {landlines.map((l, idx) => l && (
+                        <button key={idx} onClick={() => handleInteraction("landline", `tel:${l}`)} className="text-xs font-bold text-gray-800 dark:text-gray-200 tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors" dir="ltr">
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {phones && phones.length > 0 && (
+                  <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2.5 rounded-2xl transition-colors">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl glass-icon flex items-center justify-center text-white shadow-sm">
+                        <i className="fa-solid fa-mobile-screen-button text-[11px]"></i>
+                      </div>
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">شماره تلفن</span>
+                    </div>
+                    <div className="flex flex-col gap-1 text-left">
+                      {phones.map((p, idx) => p && (
+                        <button key={idx} onClick={() => handleInteraction("phone", `tel:${p}`)} className="text-xs font-bold text-gray-800 dark:text-gray-200 tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors" dir="ltr">
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {website && (
+                <>
+                  <hr className="border-gray-100 dark:border-gray-700 opacity-60 mt-4 mb-3 transition-colors" />
+                  <button onClick={() => handleInteraction("website", website)} className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-2xl py-3 flex justify-center items-center gap-2 text-[13px] font-bold transition-colors shadow-md">
+                    <i className="fa-solid fa-globe"></i> بازدید از سایت
+                  </button>
+                </>
+              )}
+            </section>
+          ) : null}
+
+          {/* Branches Section */}
+          {branches && branches.length > 0 && (
+            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+              <div className="flex items-center gap-2 mb-4">
+                <i className="fa-solid fa-location-dot text-sm text-violet-500 dark:text-violet-400"></i>
+                <h2 className="font-bold text-gray-800 dark:text-white text-sm">آدرس شعب ما</h2>
+              </div>
+              
+              <div className="flex gap-4 overflow-x-auto hide-scrollbar w-full snap-x pb-2">
+                {branches.map((b, idx) => (
+                  <div key={idx} className="carousel-item opacity-50 scale-90 snap-center shrink-0 w-[85%] bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 flex flex-col items-center transition-colors">
+                    <h3 className="font-bold text-violet-700 dark:text-violet-400 text-sm mb-2">{b.title || "شعبه"}</h3>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-5 text-center leading-relaxed">{b.address}</p>
+                    
+                    <div className="flex justify-center gap-3 w-full">
+                      {b.balad && (
+                        <button onClick={() => handleInteraction("balad", b.balad)} className="flex flex-1 justify-center">
+                          <div className="w-16 h-16 rounded-xl bg-white dark:bg-gray-700 shadow-[0_8px_30px_-5px_rgba(0,0,0,0.05)] flex flex-col items-center justify-center gap-1 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <span className="text-xl">🗺️</span>
+                            <span className="text-[9px] font-medium text-gray-600 dark:text-gray-300">بلد</span>
+                          </div>
+                        </button>
+                      )}
+                      {b.neshan && (
+                        <button onClick={() => handleInteraction("neshan", b.neshan)} className="flex flex-1 justify-center">
+                          <div className="w-16 h-16 rounded-xl bg-white dark:bg-gray-700 shadow-[0_8px_30px_-5px_rgba(0,0,0,0.05)] flex flex-col items-center justify-center gap-1 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <span className="text-xl">📍</span>
+                            <span className="text-[9px] font-medium text-gray-600 dark:text-gray-300">نشان</span>
+                          </div>
+                        </button>
+                      )}
+                      {b.googleMaps && (
+                        <button onClick={() => handleInteraction("googleMaps", b.googleMaps)} className="flex flex-1 justify-center">
+                          <div className="w-16 h-16 rounded-xl bg-white dark:bg-gray-700 shadow-[0_8px_30px_-5px_rgba(0,0,0,0.05)] flex flex-col items-center justify-center gap-1 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <span className="text-xl">G</span>
+                            <span className="text-[9px] font-medium text-gray-600 dark:text-gray-300">مپس</span>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Social Media Section */}
+          {socials && Object.keys(socials).length > 0 && (
+            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-2 h-2 rounded-full bg-violet-500 dark:bg-violet-400"></div>
+                <h2 className="font-bold text-gray-800 dark:text-white text-sm">ما را در شبکه‌های اجتماعی دنبال کنید</h2>
+              </div>
+
+              <div className="flex gap-4 overflow-x-auto hide-scrollbar w-full px-2 snap-x py-2">
+                {Object.entries(socials).map(([key, val]) => {
+                  if (!val) return null;
+                  
+                  let iconClass = "fa-solid fa-globe";
+                  let bgClass = "bg-gray-800 text-white";
+                  let title = key;
+
+                  if (key === "instagram") { iconClass = "fa-brands fa-instagram"; title = "اینستاگرام"; bgClass = "insta-gradient text-white"; }
+                  else if (key === "telegram") { iconClass = "fa-brands fa-telegram"; title = "تلگرام"; bgClass = "bg-[#0088cc] text-white"; }
+                  else if (key === "whatsapp") { iconClass = "fa-brands fa-whatsapp"; title = "واتساپ"; bgClass = "bg-[#25D366] text-white"; }
+                  else if (key === "youtube") { iconClass = "fa-brands fa-youtube"; title = "یوتیوب"; bgClass = "bg-red-600 text-white"; }
+
+                  return (
+                    <button key={key} onClick={() => handleInteraction(key, val)} className="flex flex-col items-center gap-2 snap-center shrink-0">
+                      <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform ${bgClass}`}>
+                        <i className={`${iconClass} text-xl`}></i>
+                      </div>
+                      <span className="text-[9px] font-medium text-gray-600 dark:text-gray-300">{title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Products Section */}
+          {products && products.length > 0 && (
+            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+              <div className="flex items-center gap-2 mb-1">
+                <i className="fa-solid fa-store text-violet-500 dark:text-violet-400 text-sm"></i>
+                <h2 className="font-bold text-gray-800 dark:text-white text-sm">خدمات و محصولات ما</h2>
+              </div>
+              
+              <div className="flex gap-4 overflow-x-auto hide-scrollbar w-full snap-x pb-4 pt-2">
+                {products.map((prod, idx) => (
+                  <button key={idx} onClick={() => handleInteraction("product", prod.link)} className="carousel-item opacity-50 scale-90 bg-white dark:bg-gray-800 rounded-2xl shadow-[0_8px_30px_-5px_rgba(0,0,0,0.05)] p-2 flex flex-col items-center snap-center shrink-0 w-44 border border-gray-100 dark:border-gray-700 transition-colors hover:opacity-100 hover:scale-95 duration-300">
+                    <div className="w-full h-32 rounded-xl overflow-hidden mb-3 bg-gray-50 dark:bg-gray-900 relative">
+                      {prod.imageUrl ? (
+                        <img src={prod.imageUrl} alt={prod.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">بدون تصویر</div>
+                      )}
+                    </div>
+                    <h3 className="text-[11px] font-bold text-gray-800 dark:text-gray-100 mb-1">{prod.title}</h3>
+                    <p className="text-[9px] text-gray-400 dark:text-gray-500 text-center mb-2 line-clamp-2 px-1">{prod.description}</p>
+                    <p className="text-violet-600 dark:text-violet-400 font-bold text-[13px] mt-auto" dir="ltr">
+                      {prod.price || "توافقی"}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Image Gallery Section */}
+          {gallery && gallery.length > 0 && (
+            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+              <div className="flex items-center gap-2 mb-1">
+                <i className="fa-regular fa-images text-violet-500 dark:text-violet-400 text-sm"></i>
+                <h2 className="font-bold text-gray-800 dark:text-white text-sm">گالری تصاویر</h2>
+              </div>
+              
+              <div className="flex gap-3 overflow-x-auto hide-scrollbar w-full snap-x pb-2 pt-2">
+                {gallery.map((imgUrl, idx) => (
+                  <div key={idx} className="carousel-item opacity-50 scale-90 shrink-0 w-[75%] h-40 rounded-2xl overflow-hidden snap-center shadow-md relative">
+                    <img src={imgUrl} className="w-full h-full object-cover" alt={`تصویر ${idx + 1}`} referrerPolicy="no-referrer" />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Working Hours Section */}
+          {workingDays && (
+            <section className="flex flex-col items-center pt-2">
+              <div className="flex items-center gap-2 mb-4">
+                <i className="fa-regular fa-clock text-violet-500 dark:text-violet-400 text-sm"></i>
+                <h2 className="font-bold text-gray-800 dark:text-white text-sm">ساعات کاری</h2>
+              </div>
+
+              <div className="w-full bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-[0_4px_20px_-2px_rgba(124,58,237,0.08)] border border-violet-50/50 dark:border-gray-700/50 transition-colors">
+                <div className="flex flex-col space-y-3 text-[13px] font-medium text-gray-600 dark:text-gray-300">
+                  {Object.entries(workingDays).map(([day, val]) => (
+                    <div key={day} className="flex justify-between items-center border-b border-gray-50 dark:border-gray-800 pb-2 transition-colors last:border-0">
+                      <span className="w-16">{day}</span>
+                      {val.isOpen && !val.isClosed ? (
+                        <>
+                          <span dir="ltr" className="text-gray-500 dark:text-gray-400">{val.openTime} - {val.closeTime}</span>
+                          <span className="bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 px-3 py-0.5 rounded-full text-[10px]">باز</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-gray-500 dark:text-gray-400">تعطیل</span>
+                          <span className="bg-red-100 dark:bg-red-900/40 text-red-500 dark:text-red-400 px-2.5 py-0.5 rounded-full text-[10px]">تعطیل</span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Bottom Status */}
+          <div className="w-full bg-[#5b21b6] dark:bg-[#3b0764] rounded-full p-1.5 flex justify-between items-center shadow-md mb-8 mt-4 transition-colors">
+            <div className={`${dayStatus.bg} ${dayStatus.color} px-4 py-2 rounded-full text-[11px] font-bold flex items-center gap-2 shadow-sm`}>
+              {dayStatus.status && <div className="w-2 h-2 bg-green-700 dark:bg-green-400 rounded-full animate-pulse"></div>}
+              وضعیت: {dayStatus.text}
+            </div>
+            <span className="text-white dark:text-gray-200 text-xs font-bold pl-4">
+              {dayStatus.status ? "هم‌اکنون فروشگاه باز است" : "در حال حاضر تعطیل است"}
+            </span>
+          </div>
+        </main>
+        
+        <footer className="mt-4 w-full text-center px-4 pb-8 space-y-2 select-none">
+          <p className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 leading-relaxed font-medium">
+            تمامی حق انتشار و استفاده از این کارت برای پلتفرم <span className="font-bold text-gray-500 dark:text-gray-400">کارتت</span> می‌باشد.
+          </p>
+          <p className="text-[11px] font-bold text-violet-600 dark:text-violet-400">
+            با کارتت رایگان بسازید
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }
