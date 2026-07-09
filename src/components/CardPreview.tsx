@@ -35,41 +35,52 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
   const themeHex = design?.colorTheme || "#3B82F6";
   const template = design?.template || "modern";
   
-  // Dark mode state: Initialize from admin panel, but allow user toggle
+  // State for Dark Mode
   const [localIsDark, setLocalIsDark] = useState(design?.isDark ?? false);
 
-  // Update local dark mode if panel changes it (useful in preview mode)
+  // Sync with panel if changed from admin
   useEffect(() => {
     setLocalIsDark(design?.isDark ?? false);
   }, [design?.isDark]);
 
+  // A completely isolated mode function that bypasses Tailwind's global "dark:" variants
+  // This guarantees the toggle works perfectly even if the parent app has <body class="dark">
+  const mode = (lightClass: string, darkClass: string) => {
+    return localIsDark ? darkClass : lightClass;
+  };
+
   const galleryRef = useRef<HTMLDivElement>(null);
   const productsRef = useRef<HTMLDivElement>(null);
 
-  // Smooth Auto-scroll without stealing window focus (No scrollIntoView)
+  // Infinite Scroll Arrays (Duplicated 50 times to create a real infinite feel without jumping)
+  const infiniteGallery = gallery && gallery.length > 0 ? Array(50).fill(gallery).flat() : [];
+  const infiniteProducts = products && products.length > 0 ? Array(50).fill(products).flat() : [];
+
+  // Smooth Auto-scroll for Gallery
   useEffect(() => {
     let scrollInterval: NodeJS.Timeout;
-    if (gallery && gallery.length > 1) {
+    if (infiniteGallery.length > 1) {
       scrollInterval = setInterval(() => {
         if (galleryRef.current) {
-          galleryRef.current.scrollBy({ left: -180, behavior: 'smooth' });
+          galleryRef.current.scrollBy({ left: -250, behavior: 'smooth' });
         }
       }, 3500);
     }
     return () => clearInterval(scrollInterval);
-  }, [gallery]);
+  }, [infiniteGallery.length]);
 
+  // Smooth Auto-scroll for Products
   useEffect(() => {
     let scrollInterval: NodeJS.Timeout;
-    if (products && products.length > 1) {
+    if (infiniteProducts.length > 1) {
       scrollInterval = setInterval(() => {
         if (productsRef.current) {
-          productsRef.current.scrollBy({ left: -180, behavior: 'smooth' });
+          productsRef.current.scrollBy({ left: -200, behavior: 'smooth' });
         }
       }, 3000);
     }
     return () => clearInterval(scrollInterval);
-  }, [products]);
+  }, [infiniteProducts.length]);
 
   // Click Tracker for Live Cards
   const handleInteraction = async (type: string, url?: string) => {
@@ -90,31 +101,31 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     const todaySchedule = workingDays?.[todayStr];
 
     if (!todaySchedule || !todaySchedule.isOpen || todaySchedule.isClosed) {
-      return { text: "تعطیل", fullText: "امروز تعطیل است", color: "text-red-500", bg: "bg-red-100 dark:bg-red-900/40 text-red-900 dark:text-red-100", dot: "bg-red-500" };
+      return { 
+        text: "تعطیل", 
+        fullText: "امروز تعطیل است", 
+        bg: mode("bg-red-100 text-red-900", "bg-red-900/40 text-red-100"), 
+        dot: "bg-red-500" 
+      };
     }
     return { 
       text: "باز", 
       fullText: `باز است (ساعت کاری: ${todaySchedule.openTime} الی ${todaySchedule.closeTime})`, 
-      color: "text-emerald-500", 
-      bg: "bg-[#86efac] dark:bg-green-900 text-green-900 dark:text-green-100", 
-      dot: "bg-green-700 dark:bg-green-400" 
+      bg: mode("bg-[#86efac] text-green-900", "bg-green-900/40 text-green-100"), 
+      dot: mode("bg-green-700", "bg-green-400")
     };
   };
 
   const dayStatus = getDayStatus();
-
-  // Create infinite loops for carousels by duplicating arrays
-  const infiniteGallery = gallery && gallery.length > 0 ? [...gallery, ...gallery, ...gallery, ...gallery] : [];
-  const infiniteProducts = products && products.length > 0 ? [...products, ...products, ...products, ...products] : [];
 
   // ==========================================
   // ONLY render this advanced UI for "modern" template
   // ==========================================
   if (template === "modern") {
     return (
-      <div className={localIsDark ? "dark" : ""}>
+      <div className="card-preview-scope">
         <div
-          className="max-w-md mx-auto min-h-screen relative overflow-hidden shadow-2xl transition-colors duration-300 bg-[#fafaff] dark:bg-[#0f172a] text-gray-800 dark:text-gray-200 font-sans card-preview-scope template-modern"
+          className={`max-w-md mx-auto min-h-screen relative overflow-hidden shadow-2xl transition-colors duration-300 font-sans template-modern ${mode("bg-[#fafaff] text-gray-800", "bg-[#0f172a] text-gray-200")}`}
           style={{ direction: "rtl" }}
         >
           <style dangerouslySetInnerHTML={{ __html: `
@@ -130,39 +141,41 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
           {/* Header Section */}
           <header className="relative pt-4 pb-6 px-4 shadow-sm min-h-[350px] overflow-hidden">
             {bgImageUrl ? (
-              <img src={bgImageUrl} alt="پس‌زمینه" className="absolute inset-0 w-full h-full object-cover object-center opacity-50 dark:opacity-30 transition-opacity z-0" referrerPolicy="no-referrer" />
+              <img src={bgImageUrl} alt="پس‌زمینه" className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity z-0 ${mode("opacity-50", "opacity-30")}`} referrerPolicy="no-referrer" />
             ) : (
-              <div className="absolute inset-0 w-full h-full bg-gray-200 dark:bg-gray-800 opacity-50 dark:opacity-30 transition-opacity z-0"></div>
+              <div className={`absolute inset-0 w-full h-full transition-opacity z-0 ${mode("bg-gray-200 opacity-50", "bg-gray-800 opacity-30")}`}></div>
             )}
-            <div className="absolute inset-0 bg-white/30 dark:bg-black/40 transition-colors z-0"></div>
-            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#fafaff] dark:from-[#0f172a] to-transparent z-0 transition-colors duration-300"></div>
+            <div className={`absolute inset-0 transition-colors z-0 ${mode("bg-white/30", "bg-black/40")}`}></div>
+            <div className={`absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t to-transparent z-0 transition-colors duration-300 ${mode("from-[#fafaff]", "from-[#0f172a]")}`}></div>
 
             {/* Dark Mode Toggle */}
             <div className="flex justify-end items-center relative z-10">
               <button 
                 onClick={() => setLocalIsDark(!localIsDark)}
-                className="w-9 h-9 bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm text-gray-700 dark:text-gray-300 hover:scale-105 transition-transform"
+                className={`w-9 h-9 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm hover:scale-105 transition-transform ${mode("bg-white/70 text-gray-700", "bg-gray-800/70 text-gray-300")}`}
               >
                 {localIsDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
 
             <div className="flex flex-col items-center mt-2 relative z-10">
-              {/* Logo - Background and Border Removed */}
+              {/* Logo - Removed Background and Border entirely */}
               <div className="w-24 h-24 mt-4 mb-1 flex items-center justify-center overflow-hidden">
                 {logoUrl ? (
-                  <img src={logoUrl} alt="لوگو" className="w-full h-full object-contain drop-shadow-md" referrerPolicy="no-referrer" />
+                  <img src={logoUrl} alt="لوگو" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="text-3xl font-bold text-gray-800 dark:text-gray-200 drop-shadow-md">{businessName ? businessName.charAt(0) : "B"}</span>
+                  <span className={`text-3xl font-bold drop-shadow-md ${mode("text-gray-800", "text-gray-200")}`}>
+                    {businessName ? businessName.charAt(0) : "B"}
+                  </span>
                 )}
               </div>
 
-              <h1 className="text-3xl text-center font-extrabold text-gray-900 dark:text-white mb-1 drop-shadow-md">
+              <h1 className={`text-3xl text-center font-extrabold mb-1 drop-shadow-md ${mode("text-gray-900", "text-white")}`}>
                 {businessName || "نام کسب و کار شما"}
               </h1>
 
               {brandManager && (
-                <p className="text-xs text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-1 font-bold bg-white/60 dark:bg-gray-800/60 px-3 py-1 rounded-full backdrop-blur-sm shadow-sm transition-colors">
+                <p className={`text-xs mb-4 flex items-center gap-1 font-bold px-3 py-1 rounded-full backdrop-blur-sm shadow-sm transition-colors ${mode("text-gray-700 bg-white/60", "text-gray-200 bg-gray-800/60")}`}>
                   مدیریت: <span style={{ color: themeHex }}>{brandManager}</span>
                 </p>
               )}
@@ -172,7 +185,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                   <p className="font-extrabold text-[13px]" style={{ color: themeHex }}>"{slogan}"</p>
                 )}
                 {description && (
-                  <p className="text-xs text-gray-800 dark:text-gray-300 leading-relaxed font-bold">
+                  <p className={`text-xs leading-relaxed font-bold ${mode("text-gray-800", "text-gray-300")}`}>
                     {description}
                   </p>
                 )}
@@ -184,24 +197,24 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
           <main className="px-4 py-4 space-y-6 relative z-10">
             
             {/* Contact Info Card */}
-            <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 transition-colors">
+            <section className={`rounded-[28px] p-5 shadow-soft border transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
               <div className="flex flex-col space-y-2.5">
                 
-                {/* Landlines Grouped */}
+                {/* Landlines Grouped in ONE box */}
                 {landlines && landlines.filter(Boolean).length > 0 && (
-                  <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2.5 rounded-2xl transition-colors">
+                  <div className={`flex justify-between items-center p-2.5 rounded-2xl transition-colors ${mode("bg-gray-50", "bg-gray-800")}`}>
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-xl glass-icon flex items-center justify-center text-white shadow-sm" style={{ background: `linear-gradient(135deg, ${themeHex}cc 0%, ${themeHex}e6 100%)` }}>
                         <Phone className="w-[11px]" />
                       </div>
-                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">تلفن ثابت</span>
+                      <span className={`text-xs font-bold ${mode("text-gray-700", "text-gray-300")}`}>تلفن ثابت</span>
                     </div>
                     <div className="flex flex-col gap-1 text-left">
                       {landlines.filter(Boolean).map((l, idx) => (
                         <button
                           key={`landline-${idx}`}
                           onClick={() => handleInteraction("landline", `tel:${l}`)}
-                          className="text-xs font-bold text-gray-800 dark:text-gray-200 tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-right"
+                          className={`text-xs font-bold tracking-wider hover:text-blue-600 transition-colors text-right ${mode("text-gray-800", "text-gray-200")}`}
                           dir="ltr"
                         >
                           {l}
@@ -211,21 +224,21 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                   </div>
                 )}
 
-                {/* Phones Grouped */}
+                {/* Phones Grouped in ONE box */}
                 {phones && phones.filter(Boolean).length > 0 && (
-                  <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2.5 rounded-2xl transition-colors">
+                  <div className={`flex justify-between items-center p-2.5 rounded-2xl transition-colors ${mode("bg-gray-50", "bg-gray-800")}`}>
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-xl glass-icon flex items-center justify-center text-white shadow-sm" style={{ background: `linear-gradient(135deg, ${themeHex}cc 0%, ${themeHex}e6 100%)` }}>
                         <Phone className="w-[11px]" />
                       </div>
-                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">شماره موبایل</span>
+                      <span className={`text-xs font-bold ${mode("text-gray-700", "text-gray-300")}`}>شماره موبایل</span>
                     </div>
                     <div className="flex flex-col gap-1 text-left">
                       {phones.filter(Boolean).map((p, idx) => (
                         <button
                           key={`phone-${idx}`}
                           onClick={() => handleInteraction("phone", `tel:${p}`)}
-                          className="text-xs font-bold text-gray-800 dark:text-gray-200 tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-right"
+                          className={`text-xs font-bold tracking-wider hover:text-blue-600 transition-colors text-right ${mode("text-gray-800", "text-gray-200")}`}
                           dir="ltr"
                         >
                           {p}
@@ -238,7 +251,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
 
               {website && (
                 <>
-                  <hr className="border-gray-100 dark:border-gray-700 opacity-60 mt-4 mb-3 transition-colors" />
+                  <hr className={`opacity-60 mt-4 mb-3 transition-colors ${mode("border-gray-100", "border-gray-700")}`} />
                   <button
                     onClick={() => handleInteraction("website", website)}
                     className="w-full text-white rounded-2xl py-3 flex justify-center items-center gap-2 text-[13px] font-bold transition-colors shadow-md hover:brightness-110"
@@ -253,40 +266,40 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
 
             {/* Branch Section */}
             {branches && branches.length > 0 && (
-              <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+              <section className={`rounded-[28px] p-5 shadow-soft border flex flex-col items-center transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
                 <div className="flex items-center gap-2 mb-4">
                   <MapPin className="w-4 h-4" style={{ color: themeHex }} />
-                  <h2 className="font-bold text-gray-800 dark:text-white text-sm">آدرس شعب ما</h2>
+                  <h2 className={`font-bold text-sm ${mode("text-gray-800", "text-white")}`}>آدرس شعب ما</h2>
                 </div>
                 <div className="flex gap-4 overflow-x-auto hide-scrollbar w-full snap-x pb-2">
                   {branches.map((b, idx) => (
-                    <div key={`branch-${idx}`} className="carousel-item opacity-100 scale-100 snap-center shrink-0 w-[85%] bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 flex flex-col items-center transition-colors">
+                    <div key={`branch-${idx}`} className={`carousel-item opacity-100 scale-100 snap-center shrink-0 w-[85%] rounded-2xl p-4 border flex flex-col items-center transition-colors ${mode("bg-gray-50 border-gray-100", "bg-gray-800 border-gray-700")}`}>
                       <h3 className="font-bold text-sm mb-2" style={{ color: themeHex }}>{b.title || "شعبه اصلی"}</h3>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-5 text-center leading-relaxed">
+                      <p className={`text-[11px] mb-5 text-center leading-relaxed ${mode("text-gray-500", "text-gray-400")}`}>
                         {b.address || "آدرس ثبت نشده است"}
                       </p>
                       <div className="flex justify-center gap-3 w-full">
                         {b.balad && (
                           <button onClick={() => handleInteraction("balad", b.balad)} className="flex flex-1 justify-center">
-                            <div className="w-20 h-20 rounded-xl bg-white dark:bg-gray-700 shadow-card flex flex-col items-center justify-center gap-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
                               <MapPin className="w-6 h-6 text-green-500" />
-                              <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300">بلد</span>
+                              <span className={`text-[10px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>بلد</span>
                             </div>
                           </button>
                         )}
                         {b.neshan && (
                           <button onClick={() => handleInteraction("neshan", b.neshan)} className="flex flex-1 justify-center">
-                            <div className="w-20 h-20 rounded-xl bg-white dark:bg-gray-700 shadow-card flex flex-col items-center justify-center gap-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
                               <MapPin className="w-6 h-6 text-blue-500" />
-                              <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300">نشان</span>
+                              <span className={`text-[10px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>نشان</span>
                             </div>
                           </button>
                         )}
                         {b.googleMaps && (
                           <button onClick={() => handleInteraction("googleMaps", b.googleMaps)} className="flex flex-1 justify-center">
-                            <div className="w-20 h-20 rounded-xl bg-white dark:bg-gray-700 shadow-card flex flex-col items-center justify-center gap-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
                               <MapPin className="w-6 h-6 text-red-500" />
-                              <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300">گوگل مپ</span>
+                              <span className={`text-[10px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>گوگل مپ</span>
                             </div>
                           </button>
                         )}
@@ -299,10 +312,10 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
 
             {/* Social Media Section */}
             {socials && Object.keys(socials).length > 0 && (
-              <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+              <section className={`rounded-[28px] p-5 shadow-soft border flex flex-col items-center transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: themeHex }}></div>
-                  <h2 className="font-bold text-gray-800 dark:text-white text-sm">ما را در شبکه‌های اجتماعی دنبال کنید</h2>
+                  <h2 className={`font-bold text-sm ${mode("text-gray-800", "text-white")}`}>ما را در شبکه‌های اجتماعی دنبال کنید</h2>
                 </div>
                 <div className="flex gap-4 overflow-x-auto hide-scrollbar w-full px-2 snap-x py-2 justify-center">
                   {Object.entries(socials).map(([key, val]) => {
@@ -314,7 +327,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                     if (key === "instagram") { iconComp = <Instagram className="w-5 h-5 text-white" />; title = "اینستاگرام"; btnClass = "insta-gradient"; }
                     else if (key === "telegram") { iconComp = <Send className="w-5 h-5 text-white -rotate-45" />; title = "تلگرام"; btnClass = "bg-[#0088cc]"; }
                     else if (key === "whatsapp") { iconComp = <Phone className="w-5 h-5 text-white" />; title = "واتساپ"; btnClass = "bg-[#25D366]"; }
-                    else if (key === "rubika") { iconComp = <CheckCircle2 className="w-5 h-5 text-gray-500 dark:text-gray-300" />; title = "روبیکا"; btnClass = "bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600"; }
+                    else if (key === "rubika") { iconComp = <CheckCircle2 className={`w-5 h-5 ${mode("text-gray-500", "text-gray-300")}`} />; title = "روبیکا"; btnClass = mode("bg-white border border-gray-100", "bg-gray-700 border border-gray-600"); }
                     else if (key === "soroush") { iconComp = <AlertCircle className="w-5 h-5 text-white" />; title = "سروش"; btnClass = "bg-[#03A9F4]"; }
                     else if (key === "bale") { iconComp = <MessageSquare className="w-5 h-5 text-white" />; title = "بله"; btnClass = "bg-[#2E86DE]"; }
                     else if (key === "youtube") { iconComp = <Youtube className="w-5 h-5 text-white" />; title = "یوتیوب"; btnClass = "bg-[#FF0000]"; }
@@ -329,7 +342,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                         <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-md group-hover:scale-105 transition-transform ${btnClass}`}>
                           {iconComp}
                         </div>
-                        <span className="text-[9px] font-medium text-gray-600 dark:text-gray-300">{title}</span>
+                        <span className={`text-[9px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>{title}</span>
                       </button>
                     );
                   })}
@@ -338,31 +351,35 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
             )}
 
             {/* Products Section - Infinite loop */}
-            {infiniteProducts && infiniteProducts.length > 0 && (
-              <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+            {infiniteProducts.length > 0 && (
+              <section className={`rounded-[28px] p-5 shadow-soft border flex flex-col items-center transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
                 <div className="flex items-center gap-2 mb-1">
                   <Store className="w-4 h-4" style={{ color: themeHex }} />
-                  <h2 className="font-bold text-gray-800 dark:text-white text-sm">خدمات و محصولات ما</h2>
+                  <h2 className={`font-bold text-sm ${mode("text-gray-800", "text-white")}`}>خدمات و محصولات ما</h2>
                 </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-5">جدیدترین و بهترین خدمات منتخب ما</p>
+                <p className={`text-[11px] mb-5 ${mode("text-gray-500", "text-gray-400")}`}>جدیدترین و بهترین خدمات منتخب ما</p>
 
                 <div ref={productsRef} className="flex gap-4 overflow-x-auto hide-scrollbar w-full snap-x pb-4">
                   {infiniteProducts.map((p, idx) => (
                     <button
                       key={`prod-${idx}`}
                       onClick={() => p.link && handleInteraction("product", p.link)}
-                      className="carousel-item opacity-100 scale-100 bg-white dark:bg-gray-800 rounded-2xl shadow-card p-2 flex flex-col items-center snap-center shrink-0 w-44 border border-gray-100 dark:border-gray-700 transition-colors hover:scale-95 duration-300 text-right"
+                      className={`carousel-item opacity-100 scale-100 rounded-2xl shadow-card p-2 flex flex-col items-center snap-center shrink-0 w-44 border transition-colors hover:scale-95 duration-300 text-right ${mode("bg-white border-gray-100", "bg-gray-800 border-gray-700")}`}
                     >
-                      <div className="w-full h-32 rounded-xl overflow-hidden mb-3 bg-gray-50 dark:bg-gray-900 relative">
+                      <div className={`w-full h-32 rounded-xl overflow-hidden mb-3 relative ${mode("bg-gray-50", "bg-gray-900")}`}>
                         {p.imageUrl ? (
                           <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">بدون تصویر</div>
                         )}
                       </div>
-                      <h3 className="text-[11px] font-bold text-gray-800 dark:text-gray-100 mb-1 w-full truncate text-center">{p.title}</h3>
-                      <p className="text-[9px] text-gray-400 dark:text-gray-500 text-center mb-2 line-clamp-2 px-1 w-full">{p.description}</p>
-                      <p className="font-bold text-[13px] mt-auto" style={{ color: themeHex }} dir="ltr">{p.price || "توافقی"}</p>
+                      <h3 className={`text-[11px] font-bold mb-1 w-full truncate text-center ${mode("text-gray-800", "text-gray-100")}`}>{p.title}</h3>
+                      <p className={`text-[9px] text-center mb-2 line-clamp-2 px-1 w-full ${mode("text-gray-400", "text-gray-500")}`}>{p.description}</p>
+                      
+                      {/* Price Logic: If empty, undefined, or null show توافقی */}
+                      <p className="font-bold text-[13px] mt-auto" style={{ color: themeHex }} dir="ltr">
+                        {p.price !== undefined && p.price !== null && p.price !== "" ? p.price : "توافقی"}
+                      </p>
                     </button>
                   ))}
                 </div>
@@ -370,13 +387,13 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
             )}
 
             {/* Image Gallery Section - Infinite loop */}
-            {infiniteGallery && infiniteGallery.length > 0 && (
-              <section className="bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 flex flex-col items-center transition-colors">
+            {infiniteGallery.length > 0 && (
+              <section className={`rounded-[28px] p-5 shadow-soft border flex flex-col items-center transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
                 <div className="flex items-center gap-2 mb-1">
                   <ImageIcon className="w-4 h-4" style={{ color: themeHex }} />
-                  <h2 className="font-bold text-gray-800 dark:text-white text-sm">گالری تصاویر</h2>
+                  <h2 className={`font-bold text-sm ${mode("text-gray-800", "text-white")}`}>گالری تصاویر</h2>
                 </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-5">لحظاتی از استایل، کیفیت و رضایت مشتریان ما</p>
+                <p className={`text-[11px] mb-5 ${mode("text-gray-500", "text-gray-400")}`}>لحظاتی از استایل، کیفیت و رضایت مشتریان ما</p>
 
                 <div ref={galleryRef} className="flex gap-3 overflow-x-auto hide-scrollbar w-full snap-x pb-2">
                   {infiniteGallery.map((imgUrl, idx) => (
@@ -393,21 +410,21 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
               <section className="flex flex-col items-center pt-2">
                 <div className="flex items-center gap-2 mb-4">
                   <Clock className="w-4 h-4" style={{ color: themeHex }} />
-                  <h2 className="font-bold text-gray-800 dark:text-white text-sm">ساعات کاری</h2>
+                  <h2 className={`font-bold text-sm ${mode("text-gray-800", "text-white")}`}>ساعات کاری</h2>
                 </div>
 
-                <div className="w-full bg-white dark:bg-[#1e293b] rounded-[28px] p-5 shadow-soft border border-purple-50/50 dark:border-gray-700/50 transition-colors">
-                  <div className="flex flex-col space-y-3 text-[13px] font-medium text-gray-600 dark:text-gray-300">
+                <div className={`w-full rounded-[28px] p-5 shadow-soft border transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
+                  <div className={`flex flex-col space-y-3 text-[13px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>
                     {Object.entries(workingDays).map(([day, val]) => (
-                      <div key={day} className="flex justify-between items-center border-b border-gray-50 dark:border-gray-800 pb-2 transition-colors last:border-0 last:pb-0">
+                      <div key={day} className={`flex justify-between items-center border-b pb-2 transition-colors last:border-0 last:pb-0 ${mode("border-gray-50", "border-gray-800")}`}>
                         <span className="w-16">{day}</span>
-                        <span dir="ltr" className="text-gray-500 dark:text-gray-400">
+                        <span dir="ltr" className={mode("text-gray-500", "text-gray-400")}>
                           {val.isOpen && !val.isClosed ? `${val.openTime} - ${val.closeTime}` : "تعطیل"}
                         </span>
                         {val.isOpen && !val.isClosed ? (
-                          <span className="bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 px-3 py-0.5 rounded-full text-[10px]">باز</span>
+                          <span className={`px-3 py-0.5 rounded-full text-[10px] ${mode("bg-green-100 text-green-600", "bg-green-900/40 text-green-400")}`}>باز</span>
                         ) : (
-                          <span className="bg-red-100 dark:bg-red-900/40 text-red-500 dark:text-red-400 px-2.5 py-0.5 rounded-full text-[10px]">تعطیل</span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] ${mode("bg-red-100 text-red-500", "bg-red-900/40 text-red-400")}`}>تعطیل</span>
                         )}
                       </div>
                     ))}
@@ -425,7 +442,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                 <div className={`w-2 h-2 rounded-full animate-pulse ${dayStatus.dot}`}></div>
                 وضعیت: {dayStatus.text}
               </div>
-              <span className="text-white dark:text-gray-200 text-xs font-bold pl-4">
+              <span className={`text-xs font-bold pl-4 ${mode("text-white", "text-gray-200")}`}>
                 {dayStatus.text === "تعطیل" ? "هم‌اکنون فروشگاه تعطیل است" : "هم‌اکنون فروشگاه باز است"}
               </span>
             </div>
@@ -433,8 +450,8 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
           </main>
 
           <footer className="mt-12 w-full text-center px-4 pb-4 space-y-2 select-none relative z-10">
-            <p className="text-[10px] md:text-xs text-gray-400 dark:text-gray-500 leading-relaxed font-medium">
-              تمامی حق انتشار و استفاده از این کارت برای پلتفرم <span className="font-bold text-gray-500 dark:text-gray-400">کارتت</span> می‌باشد.
+            <p className={`text-[10px] md:text-xs leading-relaxed font-medium ${mode("text-gray-400", "text-gray-500")}`}>
+              تمامی حق انتشار و استفاده از این کارت برای پلتفرم <span className={`font-bold ${mode("text-gray-500", "text-gray-400")}`}>کارتت</span> می‌باشد.
               هر گونه کپی‌برداری و یا استفاده غیر قانونی پیگرد قانونی دارد.
             </p>
             <p className="text-[11px] font-bold" style={{ color: themeHex }}>
@@ -448,7 +465,6 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
 
   // ==========================================
   // FALLBACK for classic / minimalist templates
-  // (Prevents the advanced layout from overriding older simple templates)
   // ==========================================
   return (
     <div className={`w-full min-h-screen p-8 text-center font-sans ${design?.isDark ? "bg-slate-900 text-slate-100" : "bg-white text-slate-800"}`} dir="rtl">
