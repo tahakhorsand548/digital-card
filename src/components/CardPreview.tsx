@@ -288,6 +288,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                             alt="بلد" 
                             className="w-full h-full object-cover" 
                           />
+                          <span className={`text-[10px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>بلد</span>
                         </div>
                       </button>
                         )}
