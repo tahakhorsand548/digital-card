@@ -7,6 +7,7 @@ import {
 import { CardData } from "../types";
 import { apiFetch } from "../utils/api";
 import baladIcon from './img card/logos/images.png';
+import instaIcon from './img card/logos/instagram.png';
 
 interface CardPreviewProps {
   data: CardData;
@@ -329,7 +330,9 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                     let title = key;
                     let btnClass = "bg-gray-800 text-white";
 
-                    if (key === "instagram") { iconComp = <Instagram className="w-5 h-5 text-white" />; title = "اینستاگرام"; btnClass = "insta-gradient"; }
+                    if (key === "instagram") { customIcon = instaIcon; // عکسی که ایمپورت کردی
+    title = "اینستاگرام"; 
+    btnClass = ""; // بک‌گراند رنگی رو خالی کن که عکس قشنگ دیده بشه }
                     else if (key === "telegram") { iconComp = <Send className="w-5 h-5 text-white -rotate-45" />; title = "تلگرام"; btnClass = "bg-[#0088cc]"; }
                     else if (key === "whatsapp") { iconComp = <Phone className="w-5 h-5 text-white" />; title = "واتساپ"; btnClass = "bg-[#25D366]"; }
                     else if (key === "rubika") { iconComp = <CheckCircle2 className={`w-5 h-5 ${mode("text-gray-500", "text-gray-300")}`} />; title = "روبیکا"; btnClass = mode("bg-white border border-gray-100", "bg-gray-700 border border-gray-600"); }
