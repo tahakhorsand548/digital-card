@@ -282,14 +282,14 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                       <div className="flex justify-center gap-3 w-full">
                         {b.balad && (
                       <button onClick={() => handleInteraction("balad", b.balad)} className="flex flex-1 justify-center">
-                        <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors overflow-hidden ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
-                          <img 
-                            src={baladIcon} 
-                            alt="بلد" 
-                            className="w-full h-full object-cover" 
-                          />
-                          <span className={`text-[10px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>بلد</span>
-                        </div>
+                          <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-1 transition-colors overflow-hidden ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
+                            <img 
+                              src={baladIcon} 
+                              alt="بلد" 
+                              className="w-10 h-10 object-contain p-1" // سایز رو به 40px محدود کردیم و با p-1 فاصله دادیم
+                            />
+                            <span className={`text-[10px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>بلد</span>
+                          </div>
                       </button>
                         )}
                         {b.neshan && (
