@@ -138,33 +138,64 @@ export default function DesignTab({
               {openDesignSection === "design" && (
                 <div className="p-5 border-t border-slate-100 space-y-4">
                   {/* 3 Templates choices */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {["modern", "classic", "minimalist"].map((t) => (
-                      <button
-                        key={t}
-                        onClick={() =>
-                          setCardData({
-                            ...cardData,
-                            design: {
-                              ...cardData.design,
-                              template: t as any,
-                            },
-                          })
-                        }
-                        className={`p-3 rounded-xl border text-center font-bold text-xs capitalize transition cursor-pointer ${
-                          cardData.design?.template === t
-                            ? "bg-blue-600 border-blue-600 text-white"
-                            : "bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-850 hover:bg-slate-100"
-                        }`}
-                      >
-                        {t === "modern"
-                          ? "مدرن (جدید)"
-                          : t === "classic"
-                            ? "کلاسیک"
-                            : "مینیمال"}
-                      </button>
-                    ))}
-                  </div>
+{/* Template Choices */}
+<div className="grid grid-cols-3 gap-3">
+
+  {/* Modern */}
+  <button
+    onClick={() =>
+      setCardData({
+        ...cardData,
+        design: {
+          ...cardData.design,
+          template: "modern",
+        },
+      })
+    }
+    className={`p-3 rounded-xl border text-center font-bold text-xs transition ${
+      cardData.design?.template === "modern"
+        ? "bg-blue-600 border-blue-600 text-white"
+        : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+    }`}
+  >
+    مدرن
+  </button>
+
+  {/* Classic */}
+  <button
+    onClick={() =>
+      setCardData({
+        ...cardData,
+        design: {
+          ...cardData.design,
+          template: "classic",
+        },
+      })
+    }
+    className={`p-3 rounded-xl border text-center font-bold text-xs transition ${
+      cardData.design?.template === "classic"
+        ? "bg-blue-600 border-blue-600 text-white"
+        : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+    }`}
+  >
+    کلاسیک
+  </button>
+
+  {/* Premium */}
+  <div className="relative">
+    <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full font-bold z-10">
+      بزودی
+    </span>
+
+    <button
+      disabled
+      className="w-full p-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-400 text-center font-bold text-xs cursor-not-allowed opacity-70"
+    >
+      👑 پلن حرفه‌ای
+    </button>
+  </div>
+
+</div>
 
                   {/* Dark & Light toggle option */}
                   <div className="flex items-center justify-between border-t border-slate-100 pt-4">
