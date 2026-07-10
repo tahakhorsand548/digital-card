@@ -103,6 +103,13 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     }
   };
 
+    const formatPrice = (price?: string | number | null) => {
+    if (price === undefined || price === null || price === "") return null;
+    const digits = String(price).replace(/[^\d]/g, "");
+    if (!digits) return null;
+    return Number(digits).toLocaleString("en-US");
+  };
+
   const getDayStatus = () => {
     const daysWeek = ["جمعه", "شنبه", "یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنجشنبه"];
     const todayStr = daysWeek[new Date().getDay()];
