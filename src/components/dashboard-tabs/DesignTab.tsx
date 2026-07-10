@@ -856,176 +856,150 @@ export default function DesignTab({
             </div>
 
             {/* PRODUCTS Manager (max 5) */}
-            <div className="rounded-2xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
-              <button
-                type="button"
-                onClick={() =>
-                  setOpenDesignSection(
-                    openDesignSection === "products" ? null : "products",
-                  )
-                }
-                className="w-full p-4 flex items-center justify-between font-extrabold text-xs text-slate-800 hover:bg-slate-50 border-none outline-none transition cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <ShoppingBag className="w-4.5 h-4.5 text-blue-500" />
-                  <span>مدیریت محصولات یا خدمات (حداکثر ۵ مورد)</span>
-                </span>
-                <div className="flex items-center gap-2">
-                  {openDesignSection === "products" && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (cardData.products.length >= 5) return;
-                        setCardData({
-                          ...cardData,
-                          products: [
-                            ...cardData.products,
-                            {
-                              id: "prod-" + Date.now(),
-                              title: "",
-                              description: "",
-                              price: "",
-                              link: "",
-                              imageUrl: "",
-                            },
-                          ],
-                        });
-                      }}
-                      disabled={cardData.products.length >= 5}
-                      className="py-1 px-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-[9px] font-bold rounded text-white flex items-center gap-1 shadow-sm cursor-pointer"
-                    >
-                      <Plus className="w-3" />
-                      افزودن محصول
-                    </button>
-                  )}
-                  {openDesignSection === "products" ? (
-                    <ChevronUp className="w-4 h-4 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
-                  )}
-                </div>
-              </button>
-              {openDesignSection === "products" && (
-                <div className="p-5 border-t border-slate-100 space-y-4">
-                  {cardData.products.length === 0 && (
-                    <p className="text-xs text-slate-400 text-center py-4 font-bold">
-                      هیچ محصول یا خدمتی تعریف نشده است. دکمه افزودن بالا را
-                      بزنید.
-                    </p>
-                  )}
-                  <div className="space-y-4">
-                    {cardData.products.map((p, idx) => (
-                      <div
-                        key={p.id}
-                        className="p-4 rounded-xl bg-slate-50/50 border border-slate-200 shadow-xs space-y-3 relative"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const copy = [...cardData.products];
-                            copy.splice(idx, 1);
-                            setCardData({ ...cardData, products: copy });
-                          }}
-                          className="absolute left-3 top-3 text-slate-400 hover:text-red-500 bg-white border border-slate-200 shadow-xs rounded-lg p-1 transition-all cursor-pointer"
-                          title="حذف"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+            {cardData.products.map((p, idx) => (
+  <div
+    key={p.id}
+    className="p-4 rounded-xl bg-slate-50/50 border border-slate-200 shadow-xs space-y-4 relative"
+  >
+    <button
+      type="button"
+      onClick={() => {
+        const copy = [...cardData.products];
+        copy.splice(idx, 1);
+        setCardData({ ...cardData, products: copy });
+      }}
+      className="absolute left-3 top-3 text-slate-400 hover:text-red-500 bg-white border border-slate-200 shadow-xs rounded-lg p-1 transition-all cursor-pointer"
+      title="حذف"
+    >
+      <Trash2 className="w-4 h-4" />
+    </button>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-655">
-                              نام کالا یا خدمت :
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="کارت ویزیت فلزی"
-                              value={p.title}
-                              onChange={(e) => {
-                                const copy = [...cardData.products];
-                                copy[idx].title = e.target.value.substring(
-                                  0,
-                                  35,
-                                );
-                                setCardData({ ...cardData, products: copy });
-                              }}
-                              className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-lg py-1.5 px-3 text-xs text-slate-800 outline-none transition-all"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-655">
-                              قیمت (تومان / ريال) :
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="450,000 تومان یا توافقی"
-                              className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-lg py-1.5 px-3 text-xs text-slate-800 outline-none transition-all"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <span className="text-[10px] font-bold text-slate-655">
-                              عکس محصول (لمس یا کپی) :
-                            </span>
-                            <div
-                              onDragOver={(e) =>
-                                handleDragOver(e, `prod-${p.id}`)
-                              }
-                              onDragLeave={(e) =>
-                                handleDragLeave(e, `prod-${p.id}`)
-                              }
-                              onDrop={(e) =>
-                                handleDrop(e, `prod-${p.id}`, (url) => {
-                                  const copy = [...cardData.products];
-                                  copy[idx].imageUrl = url;
-                                  setCardData({
-                                    ...cardData,
-                                    products: copy,
-                                  });
-                                })
-                              }
-                              className={`border border-dashed rounded-lg p-2 text-center text-[10px] flex items-center justify-center cursor-pointer min-h-[46px] ${
-                                dragActive[`prod-${p.id}`]
-                                  ? "border-blue-600 bg-blue-50/50"
-                                  : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
-                              }`}
-                            >
-                              <input
-                                type="file"
-                                id={`prodFileInput-${p.id}`}
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) =>
-                                  handleFileInputChange(
-                                    e,
-                                    `prod-${p.id}`,
-                                    (url) => {
-                                      const copy = [...cardData.products];
-                                      copy[idx].imageUrl = url;
-                                      setCardData({
-                                        ...cardData,
-                                        products: copy,
-                                      });
-                                    },
-                                  )
-                                }
-                              />
-                              <label
-                                htmlFor={`prodFileInput-${p.id}`}
-                                className="cursor-pointer flex items-center gap-1.5 text-slate-500 font-semibold text-[10px]"
-                              >
-                                <UploadCloud className="w-4 h-4 text-slate-400" />
-                                <span>انتخاب یا درگ عکس</span>
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* فیلد نام کالا */}
+      <div className="space-y-1">
+        <label className="text-[10px] font-bold text-slate-655">
+          نام کالا یا خدمت :
+        </label>
+        <input
+          type="text"
+          placeholder="مثال: کارت ویزیت فلزی"
+          value={p.title}
+          onChange={(e) => {
+            const copy = [...cardData.products];
+            copy[idx].title = e.target.value.substring(0, 35);
+            setCardData({ ...cardData, products: copy });
+          }}
+          className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-lg py-1.5 px-3 text-xs text-slate-800 outline-none transition-all"
+        />
+      </div>
+
+      {/* فیلد قیمت */}
+      <div className="space-y-1">
+        <label className="text-[10px] font-bold text-slate-655">
+          قیمت (تومان) :
+        </label>
+        <input
+          type="text"
+          placeholder="مثال: 450,000"
+          value={p.price || ""}
+          onChange={(e) => {
+            // حذف حروف و کاراکترهای غیرعددی
+            const rawValue = e.target.value.replace(/\D/g, "");
+            // فرمت کردن عدد به صورت ۳ رقم ۳ رقم
+            const formattedValue = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            
+            const copy = [...cardData.products];
+            copy[idx].price = formattedValue;
+            setCardData({ ...cardData, products: copy });
+          }}
+          className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-lg py-1.5 px-3 text-xs text-slate-800 outline-none transition-all"
+          dir="ltr"
+        />
+      </div>
+
+      {/* فیلد توضیحات */}
+      <div className="space-y-1">
+        <label className="text-[10px] font-bold text-slate-655">
+          توضیحات کوتاه :
+        </label>
+        <input
+          type="text"
+          placeholder="توضیح مختصری بنویسید..."
+          value={p.description || ""}
+          onChange={(e) => {
+            const copy = [...cardData.products];
+            copy[idx].description = e.target.value;
+            setCardData({ ...cardData, products: copy });
+          }}
+          className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-lg py-1.5 px-3 text-xs text-slate-800 outline-none transition-all"
+        />
+      </div>
+
+      {/* فیلد لینک */}
+      <div className="space-y-1">
+        <label className="text-[10px] font-bold text-slate-655">
+          لینک محصول (اختیاری) :
+        </label>
+        <input
+          type="url"
+          placeholder="https://..."
+          value={p.link || ""}
+          onChange={(e) => {
+            const copy = [...cardData.products];
+            copy[idx].link = e.target.value;
+            setCardData({ ...cardData, products: copy });
+          }}
+          className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-lg py-1.5 px-3 text-xs text-slate-800 outline-none transition-all text-left"
+          dir="ltr"
+        />
+      </div>
+
+      {/* فیلد آپلود عکس (دست‌نخورده باقی ماند) */}
+      <div className="space-y-1 md:col-span-2">
+        <span className="text-[10px] font-bold text-slate-655">
+          عکس محصول (لمس یا کپی) :
+        </span>
+        <div
+          onDragOver={(e) => handleDragOver(e, `prod-${p.id}`)}
+          onDragLeave={(e) => handleDragLeave(e, `prod-${p.id}`)}
+          onDrop={(e) =>
+            handleDrop(e, `prod-${p.id}`, (url) => {
+              const copy = [...cardData.products];
+              copy[idx].imageUrl = url;
+              setCardData({ ...cardData, products: copy });
+            })
+          }
+          className={`border border-dashed rounded-lg p-2 text-center text-[10px] flex items-center justify-center cursor-pointer min-h-[46px] ${
+            dragActive[`prod-${p.id}`]
+              ? "border-blue-600 bg-blue-50/50"
+              : "border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300"
+          }`}
+        >
+          <input
+            type="file"
+            id={`prodFileInput-${p.id}`}
+            accept="image/*"
+            className="hidden"
+            onChange={(e) =>
+              handleFileInputChange(e, `prod-${p.id}`, (url) => {
+                const copy = [...cardData.products];
+                copy[idx].imageUrl = url;
+                setCardData({ ...cardData, products: copy });
+              })
+            }
+          />
+          <label
+            htmlFor={`prodFileInput-${p.id}`}
+            className="cursor-pointer flex items-center justify-center gap-1.5 text-slate-500 font-semibold text-[10px] w-full"
+          >
+            <UploadCloud className="w-4 h-4 text-slate-400" />
+            <span>انتخاب یا درگ عکس</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+))}
 
             {/* IMAGE GALLERY Manager */}
             <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-sm space-y-4">
