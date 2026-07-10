@@ -21,6 +21,8 @@ export default function TicketsTab({
   handleSendChatMessage,
   setShowCreateTicketModal,
 }: TicketsTabProps) {
+  const hasOpenTicket = tickets.some((t) => t.status !== "ended");
+
   return (
         <div className="space-y-8 text-right max-w-5xl mx-auto">
           <div className="flex items-center justify-between">
@@ -34,11 +36,24 @@ export default function TicketsTab({
               </p>
             </div>
             <button
-              onClick={() => setShowCreateTicketModal(true)}
-              className="py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md cursor-pointer"
-            >
-              ایجاد تیکت پشتیبانی جدید
-            </button>
+                          onClick={() => {
+                            if (hasOpenTicket) return;
+                            setShowCreateTicketModal(true);
+                          }}
+                          disabled={hasOpenTicket}
+                          title={
+                            hasOpenTicket
+                              ? "شما یک تیکت باز دارید. تا زمانی که این تیکت توسط پشتیبانی خاتمه یابد، امکان ایجاد تیکت جدید وجود ندارد."
+                              : ""
+                          }
+                          className={`py-3 px-6 rounded-xl text-white text-xs font-bold shadow-md transition ${
+                            hasOpenTicket
+                              ? "bg-slate-300 cursor-not-allowed"
+                              : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                          }`}
+                        >
+                          ایجاد تیکت پشتیبانی جدید
+          </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
