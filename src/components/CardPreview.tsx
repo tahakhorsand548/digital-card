@@ -394,42 +394,53 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
               </section>
             )}
 
+
+
+const formatPrice = (price) => {
+  if (price === undefined || price === null || price === "") return null;
+  const digits = String(price).replace(/[^\d]/g, "");
+  if (!digits) return null;
+  return Number(digits).toLocaleString("en-US");
+};
+
+
             {/* Products Section - Infinite loop */}
-            <div ref={productsRef} className="flex gap-4 overflow-x-auto hide-scrollbar w-full snap-x pb-4">
-              {infiniteProducts.map((p, idx) => (
-                <button
-                  key={`prod-${idx}`}
-                  onClick={() => p.link && handleInteraction("product", p.link)}
-                  className={`carousel-item opacity-100 scale-100 rounded-2xl shadow-card p-2 flex flex-col items-center snap-center shrink-0 w-44 border transition-colors hover:scale-95 duration-300 text-right ${mode("bg-white border-gray-100", "bg-gray-800 border-gray-700")}`}
-                >
-                  <div className={`w-full h-32 rounded-xl overflow-hidden mb-3 relative ${mode("bg-gray-50", "bg-gray-900")}`}>
-                    {p.imageUrl ? (
-                      <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">بدون تصویر</div>
-                    )}
+              {infiniteProducts.length > 0 && (
+                <section className={`rounded-[28px] p-5 shadow-soft border flex flex-col items-center transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Store className="w-4 h-4" style={{ color: themeHex }} />
+                    <h2 className={`font-bold text-sm ${mode("text-gray-800", "text-white")}`}>خدمات و محصولات ما</h2>
                   </div>
-                  <h3 className={`text-[11px] font-bold mb-1 w-full truncate text-center ${mode("text-gray-800", "text-gray-100")}`}>{p.title}</h3>
-                  
-                  {/* توضیحات محصول */}
-                  {p.description && (
-                    <p className={`text-[9px] text-center mb-2 line-clamp-2 px-1 w-full ${mode("text-gray-400", "text-gray-500")}`}>
-                      {p.description}
-                    </p>
-                  )}
-                  
-                  {/* منطق قیمت: اگر خالی یا نال باشد چیزی نمایش داده نمی‌شود. 
-                    اگر عدد وارد شده باشد، در کنار کلمه تومان به صورت راست‌چین قرار می‌گیرد.
-                  */}
-                  {p.price && p.price.trim() !== "" && (
-                    <p className="font-bold text-[13px] mt-auto flex items-center gap-1" style={{ color: themeHex }} dir="rtl">
-                      <span>{p.price}</span>
-                      <span className="text-[9px] font-normal">تومان</span>
-                    </p>
-                  )}
-                </button>
-              ))}
-            </div>
+                  <p className={`text-[11px] mb-5 ${mode("text-gray-500", "text-gray-400")}`}>جدیدترین و بهترین خدمات منتخب ما</p>
+
+                  <div ref={productsRef} className="flex gap-4 overflow-x-auto hide-scrollbar w-full snap-x pb-4">
+                    {infiniteProducts.map((p, idx) => (
+                      <button
+                        key={`prod-${idx}`}
+                        onClick={() => p.link && handleInteraction("product", p.link)}
+                        className={`carousel-item opacity-100 scale-100 rounded-2xl shadow-card p-2 flex flex-col items-center snap-center shrink-0 w-44 border transition-colors hover:scale-95 duration-300 text-right ${mode("bg-white border-gray-100", "bg-gray-800 border-gray-700")}`}
+                      >
+                        <div className={`w-full h-32 rounded-xl overflow-hidden mb-3 relative ${mode("bg-gray-50", "bg-gray-900")}`}>
+                          {p.imageUrl ? (
+                            <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">بدون تصویر</div>
+                          )}
+                        </div>
+                        <h3 className={`text-[11px] font-bold mb-1 w-full truncate text-center ${mode("text-gray-800", "text-gray-100")}`}>{p.title}</h3>
+                        <p className={`text-[9px] text-center mb-2 line-clamp-2 px-1 w-full ${mode("text-gray-400", "text-gray-500")}`}>{p.description}</p>
+
+                        {/* Price Logic: if empty show nothing, if number show formatted number + تومان */}
+                        {formatPrice(p.price) && (
+                          <p className="font-bold text-[13px] mt-auto" style={{ color: themeHex }} dir="ltr">
+                            {formatPrice(p.price)} تومان
+                          </p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
 
             {/* Image Gallery Section - Infinite loop */}
             {infiniteGallery.length > 0 && (
