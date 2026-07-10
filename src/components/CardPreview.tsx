@@ -176,12 +176,13 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
             <div className="flex flex-col items-center mt-2 relative z-10">
               {/* Logo - Removed Background and Border entirely */}
               <div className="w-24 h-24 mt-4 mb-1 flex items-center justify-center overflow-hidden">
-                {logoUrl ? (
-                  <img src={logoUrl} alt="لوگو" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                ) : (
-                  <span className={`text-3xl font-bold drop-shadow-md ${mode("text-gray-800", "text-gray-200")}`}>
-                    {businessName ? businessName.charAt(0) : "B"}
-                  </span>
+                {logoUrl && (
+                  <img
+                    src={logoUrl}
+                    alt="لوگو"
+                    className="w-full h-full object-contain"
+                    referrerPolicy="no-referrer"
+                  />
                 )}
               </div>
 
