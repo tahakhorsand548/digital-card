@@ -175,16 +175,16 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
 
             <div className="flex flex-col items-center mt-2 relative z-10">
               {/* Logo - Removed Background and Border entirely */}
-              <div className="w-24 h-24 mt-4 mb-1 flex items-center justify-center overflow-hidden">
-                {logoUrl && (
-                  <img
-                    src={logoUrl}
-                    alt="لوگو"
-                    className="w-full h-full object-contain"
-                    referrerPolicy="no-referrer"
-                  />
-                )}
-              </div>
+            <div className="w-24 h-24 mt-4 mb-1 flex items-center justify-center overflow-hidden">
+              {logoUrl && (
+                <img
+                  src={logoUrl}
+                  alt="لوگو"
+                  className="w-full h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              )}
+            </div>
 
               <h1 className={`text-3xl text-center font-extrabold mb-1 drop-shadow-md ${mode("text-gray-900", "text-white")}`}>
                 {businessName || "نام کسب و کار شما"}
@@ -518,11 +518,533 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     );
   }
       if (template === "classic") {
-        return (
-            // تمام کد کلاسیک
-            <h2>این دمو کارت کلاسیک است</h2>
-        );
-    }
+    const today Persian = ["یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"][new Date().getDay()];
+
+    return (
+      <div className="card-preview-scope">
+        {/* تزریق استایل‌های بومی قالب آریانا استایل به صورت ایزوله */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          .template-classic {
+            --purple-900: #3B0764;
+            --purple-800: #4C1D95;
+            --purple-700: ${themeHex};
+            --purple-600: ${themeHex}dd;
+            --purple-500: ${themeHex};
+            --purple-400: ${themeHex}aa;
+            --purple-100: ${themeHex}1a;
+            --pink-500: #D946A6;
+            --lavender-bg: #F6F3FB;
+            --ink: #241C3A;
+            --muted: #8B87A0;
+            --muted-2: #B3AFC4;
+            --green: #16A34A;
+            --green-bg: #DCFCE7;
+            --red: #EF4444;
+            --red-bg: #FEF2F2;
+            --card-radius: 22px;
+            --shadow-soft: 0 10px 28px -14px rgba(76,29,149,0.28);
+            --shadow-card: 0 6px 20px -10px rgba(76,29,149,0.18);
+
+            --card-bg: #ffffff;
+            --border-dash: #EEE7FA;
+            --product-bg: #FBF8FF;
+            --product-border: #F0E7FC;
+            --gallery-bg: #EFEAF7;
+            --gallery-placeholder-bg: #F1EEF6;
+            --btn-site-bg: #F3F1F8;
+            --bottom-bar-bg: #ffffff;
+            --sheet-bg: #ffffff;
+            --sheet-option-bg: #FAF8FD;
+            --sheet-option-border: #F0E9FA;
+            --sheet-handle-bg: #E5E0EF;
+            --toast-bg: #241C3A;
+            --toast-text: #ffffff;
+            --header-grad-1: var(--purple-700);
+            --header-grad-2: var(--purple-500);
+            --header-grad-3: var(--purple-400);
+            --accent-text: var(--purple-700);
+            --today-bg: var(--purple-100);
+            
+            direction: rtl;
+            font-family: inherit;
+          }
+
+          .template-classic.dark-theme {
+            --lavender-bg: #120B1E;
+            --ink: #F1EDFB;
+            --muted: #A79CC4;
+            --muted-2: #877AA6;
+            --green-bg: #123322;
+            --red-bg: #3A1A1E;
+            --shadow-soft: 0 10px 28px -14px rgba(0,0,0,0.65);
+            --shadow-card: 0 6px 20px -10px rgba(0,0,0,0.55);
+
+            --card-bg: #1D1430;
+            --border-dash: #2C2144;
+            --product-bg: #231a38;
+            --product-border: #342753;
+            --gallery-bg: #231a38;
+            --gallery-placeholder-bg: #241a38;
+            --btn-site-bg: #241a38;
+            --bottom-bar-bg: #1D1430;
+            --sheet-bg: #1D1430;
+            --sheet-option-bg: #241a38;
+            --sheet-option-border: #342753;
+            --sheet-handle-bg: #3a2d57;
+            --toast-bg: #F1EDFB;
+            --toast-text: #241C3A;
+            --header-grad-1: #2B1250;
+            --header-grad-2: #4C1D95;
+            --header-grad-3: #6D28D9;
+            --accent-text: var(--purple-400);
+            --today-bg: rgba(147,51,234,0.22);
+          }
+
+          .template-classic .app {
+            width: 100%;
+            max-width: 430px;
+            min-height: 100vh;
+            background: var(--lavender-bg);
+            position: relative;
+            padding-bottom: 104px;
+            margin: 0 auto;
+            transition: background-color .35s ease;
+          }
+
+          .template-classic .header-card {
+            position: relative;
+            background: linear-gradient(160deg, var(--header-grad-1) 0%, var(--header-grad-2) 55%, var(--header-grad-3) 100%);
+            transition: background .35s ease;
+            padding: 22px 20px 30px;
+            border-radius: 0 0 32px 32px;
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+          }
+
+          .template-classic .header-card::before {
+            content: ""; position: absolute; width: 260px; height: 260px;
+            background: radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 70%);
+            top: -90px; left: -60px; border-radius: 50%;
+          }
+
+          .template-classic .top-row { display: flex; justify-content: space-between; position: relative; z-index: 2; }
+          
+          .template-classic .theme-toggle {
+            width: 38px; height: 38px; border-radius: 12px;
+            background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.28);
+            display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); transition: .2s;
+          }
+          .template-classic .theme-toggle:hover { background: rgba(255,255,255,0.26); }
+
+          .template-classic .avatar-wrap { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; margin-top: 6px; }
+          .template-classic .avatar-ring {
+            width: 112px; height: 112px; border-radius: 50%;
+            background: linear-gradient(135deg, #FDE68A 0%, #FACC15 100%);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 20px -6px rgba(0,0,0,0.35), 0 0 0 4px rgba(255,255,255,0.25);
+            overflow: hidden;
+          }
+
+          .template-classic .store-name { position: relative; z-index: 2; color: #fff; font-size: 22px; font-weight: 800; margin-top: 14px; text-align: center; }
+          .template-classic .store-manager { position: relative; z-index: 2; color: rgba(255,255,255,0.85); font-size: 13.5px; font-weight: 500; margin-top: 4px; text-align: center; }
+
+          .template-classic .quote-box {
+            position: relative; z-index: 2; margin-top: 18px;
+            background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.22);
+            border-radius: 16px; padding: 14px 16px; text-align: center; backdrop-filter: blur(6px);
+          }
+          .template-classic .quote-mark { color: rgba(255,255,255,0.55); font-size: 20px; font-weight: 800; display: block; line-height: 0.4; margin-bottom: 8px; }
+          .template-classic .quote-box p { color: #fff; font-size: 14.5px; font-weight: 600; line-height: 1.8; }
+          .template-classic .quote-box .desc { margin-top: 8px; color: rgba(255,255,255,0.82); font-size: 12.5px; font-weight: 400; line-height: 1.9; }
+
+          .template-classic .section { background: var(--card-bg); margin: 14px 14px 0; border-radius: var(--card-radius); padding: 18px 16px; box-shadow: var(--shadow-card); transition: background-color .35s ease; }
+          .template-classic .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+          .template-classic .section-title { display: flex; align-items: center; gap: 8px; font-size: 15.5px; font-weight: 700; color: var(--ink); }
+          .template-classic .title-bar { width: 4px; height: 16px; border-radius: 4px; background: linear-gradient(180deg, var(--purple-500), var(--pink-500)); order: 2; }
+          .template-classic .section-title span.txt { order: 1; }
+
+          .template-classic .contact-group-label { font-size: 12px; color: var(--muted); font-weight: 600; margin: 14px 0 8px; }
+          .template-classic .contact-group-label:first-of-type { margin-top: 0; }
+          .template-classic .contact-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px dashed var(--border-dash); }
+          .template-classic .contact-row:last-child { border-bottom: none; }
+          .template-classic .contact-icon { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+          .template-classic .contact-icon.mobile { background: #DCFCE7; color: var(--green); }
+          .template-classic .contact-icon.tel { background: #DBEAFE; color: #2563EB; }
+          .template-classic .contact-info { flex: 1; min-width: 0; }
+          .template-classic .contact-number { font-size: 14.5px; font-weight: 700; color: var(--ink); direction: ltr; text-align: right; }
+          .template-classic .contact-label { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+          .template-classic .call-btn {
+            display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, var(--purple-600), var(--purple-400));
+            color: #fff; font-family: inherit; font-weight: 700; font-size: 12.5px; border: none; border-radius: 11px; padding: 9px 14px; cursor: pointer; white-space: nowrap;
+            box-shadow: 0 6px 14px -6px rgba(124,58,237,0.55);
+          }
+
+          .template-classic .website-link-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px; margin: 14px 14px 0;
+            background: linear-gradient(135deg, var(--purple-700), var(--purple-500)); color: #fff; text-decoration: none; font-weight: 700; font-size: 14.5px; padding: 14px; border-radius: 16px; box-shadow: var(--shadow-soft);
+          }
+
+          .template-classic .address-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 4px; border-bottom: 1px dashed var(--border-dash); }
+          .template-classic .address-row:last-child { border-bottom: none; }
+          .template-classic .address-main-info { display: flex; align-items: center; gap: 10px; width: 100%; }
+          .template-classic .address-pin { width: 38px; height: 38px; border-radius: 11px; background: #FCE7F3; color: var(--pink-500); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+          .template-classic .address-text-wrap { flex: 1; min-width: 0; }
+          .template-classic .address-branch { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+          .template-classic .address-text { font-size: 13.5px; color: var(--ink); font-weight: 500; line-height: 1.6; }
+          .template-classic .address-nav-buttons { display: flex; gap: 8px; width: 100%; margin-top: 4px; padding-right: 48px; }
+
+          .template-classic .nav-icon-btn {
+            display: flex; align-items: center; gap: 4px; background: var(--sheet-option-bg); border: 1px solid var(--sheet-option-border);
+            padding: 6px 12px; border-radius: 10px; cursor: pointer; transition: .2s;
+          }
+          .template-classic .nav-icon-btn span { font-size: 11px; font-weight: bold; color: var(--ink); }
+
+          .template-classic .social-viewport { overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+          .template-classic .social-viewport::-webkit-scrollbar { display: none; }
+          .template-classic .social-track { display: flex; gap: 20px; padding: 2px 2px 6px; justify-content: center; }
+          .template-classic .social-item { display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; width: 58px; background: none; border: none; cursor: pointer; }
+          .template-classic .social-icon { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 14px -8px rgba(0,0,0,0.25); overflow: hidden; background: #fff; }
+          .template-classic .social-icon img { width: 32px; height: 32px; object-fit: contain; }
+          .template-classic .social-label { font-size: 11px; color: var(--ink); font-weight: 600; white-space: nowrap; }
+
+          .template-classic .products-viewport { overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; margin: 0 -16px; padding: 0 16px; }
+          .template-classic .products-viewport::-webkit-scrollbar { display: none; }
+          .template-classic .products-track { display: flex; gap: 12px; width: max-content; }
+          .template-classic .product-card { width: 172px; background: var(--product-bg); border: 1px solid var(--product-border); border-radius: 18px; overflow: hidden; flex-shrink: 0; transition: all .35s ease; text-align: right; }
+          .template-classic .product-image-wrap { width: 100%; height: 150px; background: linear-gradient(160deg,#3d2b52,#7a4fa0); overflow: hidden; position: relative; }
+          .template-classic .product-image-wrap img { width: 100%; height: 100%; object-cover: cover; }
+          .template-classic .product-body { padding: 10px 12px 12px; }
+          .template-classic .product-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+          .template-classic .product-desc { font-size: 11px; color: var(--muted); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px; min-height: 34px; }
+          .template-classic .product-footer { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+          .template-classic .product-price { font-size: 11.5px; font-weight: 700; color: var(--purple-600); white-space: nowrap; }
+          .template-classic .product-view-btn { width: 100%; text-align: center; background: linear-gradient(135deg, var(--purple-600), var(--purple-400)); color: #fff; font-family: inherit; font-weight: 700; font-size: 11px; border: none; border-radius: 9px; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
+
+          .template-classic .gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+          .template-classic .gallery-item { position: relative; border-radius: 16px; overflow: hidden; aspect-ratio: 1/1; background: var(--gallery-bg); }
+          .template-classic .gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+          .template-classic .status-badge { display: flex; align-items: center; gap: 6px; background: var(--green-bg); color: var(--green); font-size: 11.5px; font-weight: 700; padding: 6px 12px; border-radius: 20px; }
+          .template-classic .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulseDot 1.6s infinite; }
+          .template-classic .status-badge.closed { background: var(--red-bg); color: var(--red); }
+          .template-classic .status-badge.closed .status-dot { background: var(--red); animation: pulseDotRed 1.6s infinite; }
+
+          @keyframes pulseDot { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,0.45); } 70% { box-shadow: 0 0 0 7px rgba(22,163,74,0); } 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); } }
+          @keyframes pulseDotRed { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.45); } 70% { box-shadow: 0 0 0 7px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
+
+          .template-classic .hours-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 10px; border-radius: 12px; font-size: 13.5px; }
+          .template-classic .hours-row .day { font-weight: 600; color: var(--ink); }
+          .template-classic .hours-row .time { font-weight: 600; color: var(--ink); direction: ltr; }
+          .template-classic .hours-row.today { background: var(--today-bg); }
+          .template-classic .hours-row.today .day { color: var(--accent-text); }
+          .template-classic .hours-row.today .time { color: var(--green); }
+          .template-classic .hours-row.closed .time { color: var(--red); font-weight: 700; }
+
+          .template-classic .bottom-status-bar {
+            margin: 14px 14px 0; background: var(--card-bg); border-radius: 20px; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; box-shadow: var(--shadow-card);
+          }
+          .template-classic .bottom-status-text { font-size: 12px; font-weight: bold; color: var(--ink); }
+          
+          .template-classic .classic-footer { padding: 24px 16px; text-align: center; }
+          .template-classic .classic-footer p { font-size: 11px; color: var(--muted); line-height: 1.8; }
+        `}} />
+
+        <div className={`template-classic ${localIsDark ? "dark-theme" : ""}`}>
+          <div className="app">
+            
+            {/* ================= HEADER ================= */}
+            <header className="header-card">
+              <div className="top-row">
+                <div style={{ width: '38px' }}></div> {/* تعادل هدر */}
+                <button 
+                  className="theme-toggle" 
+                  onClick={() => setLocalIsDark(!localIsDark)}
+                  aria-label="تغییر تم"
+                >
+                  {localIsDark ? (
+                    <Sun className="w-[18px] h-[18px] text-white" />
+                  ) : (
+                    <Moon className="w-[18px] h-[18px] text-white" />
+                  )}
+                </button>
+              </div>
+
+              <div className="avatar-wrap">
+                <div className="avatar-ring">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="لوگو" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <svg viewBox="0 0 100 100" fill="none" className="w-[72px] h-[72px]">
+                      <circle cx="50" cy="38" r="20" fill="#3B2A20"/>
+                      <path d="M28 40 C28 20 72 20 72 40 L70 34 C60 24 40 24 30 34 Z" fill="#5B3A22"/>
+                      <circle cx="50" cy="42" r="16" fill="#F3C9A6"/>
+                      <rect x="30" y="58" width="40" height="30" rx="10" fill="#2B6CB0"/>
+                      <rect x="36" y="58" width="10" height="14" fill="#E2AE8B"/>
+                      <circle cx="41" cy="40" r="3" fill="#2B1810"/>
+                      <circle cx="59" cy="40" r="3" fill="#2B1810"/>
+                      <path d="M43 48 Q50 52 57 48" stroke="#8A4A2E" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    </svg>
+                  )}
+                </div>
+              </div>
+
+              <h1 className="store-name">{businessName || "آریانا استایل"}</h1>
+              {brandManager && <div className="store-manager">مدیریت: {brandManager}</div>}
+
+              {(slogan || description) && (
+                <div className="quote-box">
+                  <span className="quote-mark">”</span>
+                  {slogan && <p>{slogan}</p>}
+                  {description && <div className="desc">{description}</div>}
+                </div>
+              )}
+            </header>
+
+            {/* ================= CONTACT INFO ================= */}
+            <main>
+              {((phones && phones.filter(Boolean).length > 0) || (landlines && landlines.filter(Boolean).length > 0)) && (
+                <section className="section">
+                  <div className="section-head">
+                    <div className="section-title">
+                      <span class="txt">اطلاعات تماس</span>
+                      <span className="title-bar"></span>
+                    </div>
+                  </div>
+
+                  {phones && phones.filter(Boolean).length > 0 && (
+                    <>
+                      <div className="contact-group-label">شماره همراه</div>
+                      {phones.filter(Boolean).map((p, idx) => (
+                        <div key={`phone-${idx}`} className="contact-row">
+                          <div className="contact-icon mobile"><Phone className="w-[18px] h-[18px]" /></div>
+                          <div className="contact-info">
+                            <div className="contact-number">{p}</div>
+                            <div className="contact-label">موبایل {idx + 1}</div>
+                          </div>
+                          <button className="call-btn" onClick={() => handleInteraction("phone", `tel:${p}`)}>تماس</button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {landlines && landlines.filter(Boolean).length > 0 && (
+                    <>
+                      <div className="contact-group-label">تلفن ثابت</div>
+                      {landlines.filter(Boolean).map((l, idx) => (
+                        <div key={`landline-${idx}`} className="contact-row">
+                          <div className="contact-icon tel"><Phone className="w-[18px] h-[18px]" /></div>
+                          <div className="contact-info">
+                            <div className="contact-number">{l}</div>
+                            <div className="contact-label">خط ثابت {idx + 1}</div>
+                          </div>
+                          <button className="call-btn" onClick={() => handleInteraction("landline", `tel:${l}`)}>تماس</button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </section>
+              )}
+
+              {/* ================= WEBSITE BUTTON ================= */}
+              {website && (
+                <button className="website-link-btn w-[calc(100%-28px)]" onClick={() => handleInteraction("website", website)}>
+                  <Globe className="w-[18px] h-[18px]" />
+                  مشاهده وب سایت
+                </button>
+              )}
+
+              {/* ================= ADDRESSES ================= */}
+              {branches && branches.length > 0 && (
+                <section className="section">
+                  <div className="section-head">
+                    <div className="section-title">
+                      <span class="txt">آدرس‌ها</span>
+                      <span className="title-bar"></span>
+                    </div>
+                  </div>
+
+                  {branches.map((b, idx) => (
+                    <div key={`branch-${idx}`} className="address-row">
+                      <div className="address-main-info">
+                        <div className="address-pin"><MapPin className="w-[19px] h-[19px]" /></div>
+                        <div className="address-text-wrap">
+                          <div className="address-branch">{b.title || `شعبه ${idx + 1}`}</div>
+                          <div className="address-text">{b.address || "آدرس ثبت نشده است"}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="address-nav-buttons">
+                        {b.balad && (
+                          <button className="nav-icon-btn" onClick={() => handleInteraction("balad", b.balad)}>
+                            <img src={baladIcon} alt="بلد" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+                            <span>بلد</span>
+                          </button>
+                        )}
+                        {b.neshan && (
+                          <button className="nav-icon-btn" onClick={() => handleInteraction("neshan", b.neshan)}>
+                            <MapPin className="w-[14px] h-[14px] text-blue-500" />
+                            <span>نشان</span>
+                          </button>
+                        )}
+                        {b.googleMaps && (
+                          <button className="nav-icon-btn" onClick={() => handleInteraction("googleMaps", b.googleMaps)}>
+                            <MapPin className="w-[14px] h-[14px] text-red-500" />
+                            <span>گوگل مپ</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              {/* ================= SOCIAL NETWORKS ================= */}
+              {socials && Object.keys(socials).length > 0 && (
+                <section className="section">
+                  <div className="section-head">
+                    <div className="section-title">
+                      <span class="txt">شبکه‌های اجتماعی</span>
+                      <span className="title-bar"></span>
+                    </div>
+                  </div>
+                  <div className="social-viewport">
+                    <div className="social-track">
+                      {Object.entries(socials).map(([key, val]) => {
+                        if (!val) return null;
+                        let logoSrc = null;
+                        let title = key;
+
+                        if (key === "instagram") { logoSrc = instagramLogo; title = "اینستاگرام"; }
+                        else if (key === "telegram") { logoSrc = telegramLogo; title = "تلگرام"; }
+                        else if (key === "whatsapp") { logoSrc = whatsappLogo; title = "واتساپ"; }
+                        else if (key === "rubika") { logoSrc = rubikaLogo; title = "روبیکا"; }
+                        else if (key === "soroush") { logoSrc = soroushLogo; title = "سروش"; }
+                        else if (key === "bale") { logoSrc = baleLogo; title = "بله"; }
+                        else if (key === "youtube") { logoSrc = youtubeLogo; title = "یوتیوب"; }
+                        else if (key === "aparat") { logoSrc = aparatLogo; title = "آپارات"; }
+
+                        return (
+                          <button key={key} onClick={() => handleInteraction(key, val)} className="social-item">
+                            <div className="social-icon">
+                              {logoSrc ? <img src={logoSrc} alt={title} /> : <Globe className="w-6 h-6 text-gray-500" />}
+                            </div>
+                            <span className="social-label">{title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* ================= PRODUCTS ================= */}
+              {products && products.length > 0 && (
+                <section className="section">
+                  <div className="section-head">
+                    <div className="section-title">
+                      <span class="txt">محصولات ما</span>
+                      <span className="title-bar"></span>
+                    </div>
+                  </div>
+                  <div className="products-viewport">
+                    <div className="products-track">
+                      {products.map((p, idx) => (
+                        <div key={`prod-classic-${idx}`} className="product-card">
+                          <div className="product-image-wrap">
+                            {p.imageUrl ? (
+                              <img src={p.imageUrl} alt={p.title} referrerPolicy="no-referrer" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-white/50">بدون تصویر</div>
+                            )}
+                          </div>
+                          <div className="product-body">
+                            <div className="product-title">{p.title}</div>
+                            <div className="product-desc">{p.description}</div>
+                            <div className="product-footer">
+                              {formatPrice(p.price) && <div className="product-price">{formatPrice(p.price)} تومان</div>}
+                              {p.link && (
+                                <button className="product-view-btn" onClick={() => handleInteraction("product", p.link)}>مشاهده</button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* ================= GALLERY ================= */}
+              {gallery && gallery.length > 0 && (
+                <section className="section">
+                  <div className="section-head">
+                    <div className="section-title">
+                      <span class="txt">گالری تصاویر</span>
+                      <span className="title-bar"></span>
+                    </div>
+                  </div>
+                  <div className="gallery-grid">
+                    {gallery.map((imgUrl, idx) => (
+                      <div key={`gallery-classic-${idx}`} className="gallery-item">
+                        <img src={imgUrl} alt={`گالری ${idx + 1}`} referrerPolicy="no-referrer" />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* ================= WORKING HOURS ================= */}
+              {workingDays && (
+                <section className="section">
+                  <div className="section-head">
+                    <div className="section-title">
+                      <span class="txt">ساعات کاری</span>
+                      <span className="title-bar"></span>
+                    </div>
+                    <div className={`status-badge ${dayStatus.text === "تعطیل" ? "closed" : ""}`}>
+                      <div className="status-dot"></div>
+                      <span>{dayStatus.text}</span>
+                    </div>
+                  </div>
+
+                  {Object.entries(workingDays).map(([day, val]) => {
+                    const isToday = day === todayPersian;
+                    const isClosed = !val.isOpen || val.isClosed;
+                    return (
+                      <div key={day} className={`hours-row ${isToday ? "today" : ""} ${isClosed ? "closed" : ""}`}>
+                        <span className="day">{day}</span>
+                        <span className="time">{isClosed ? "تعطیل" : `${val.openTime} - ${val.closeTime}`}</span>
+                      </div>
+                    );
+                  })}
+                </section>
+              )}
+
+              {/* ================= BOTTOM BAR STATUS ================= */}
+              <div className="bottom-status-bar">
+                <span className="bottom-status-text">
+                  {dayStatus.text === "تعطیل" ? "هم‌اکنون فروشگاه تعطیل است" : `فروشگاه باز است (${dayStatus.fullText})`}
+                </span>
+                <div className={`status-badge ${dayStatus.text === "تعطیل" ? "closed" : ""}`}>
+                  <div className="status-dot"></div>
+                  <span>{dayStatus.text}</span>
+                </div>
+              </div>
+
+            </main>
+
+            {/* ================= FOOTER ================= */}
+            <footer className="classic-footer">
+              <p>تمامی حق انتشار و استفاده از این کارت برای پلتفرم کارتت می‌باشد.</p>
+              <p style={{ color: themeHex, fontWeight: 'bold', marginTop: '4px' }}>با کارتت رایگان بسازید</p>
+            </footer>
+
+          </div>
+        </div>
+      </div>
+    );
+  }
   // ==========================================
   // FALLBACK for classic / minimalist templates
   // ==========================================
