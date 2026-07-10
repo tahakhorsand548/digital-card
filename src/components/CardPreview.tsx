@@ -7,7 +7,7 @@ import {
 import { CardData } from "../types";
 import { apiFetch } from "../utils/api";
 import baladIcon from './img card/logos/images.png';
-import nashanIcon from './img card/logos/images(1).png';
+import nashanIcon from './img card/logos/images (1).png';
 import googlemapIcon from './img card/logos/google map.png';
 import instagramLogo from "./img card/logos/instagram.png";
 import telegramLogo from "./img card/logos/Telegram.webp";
@@ -313,7 +313,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                           <button onClick={() => handleInteraction("neshan", b.neshan)} className="flex flex-1 justify-center">
                             <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
                             <img 
-                              src={neshanIcon} 
+                              src={nashanIcon} 
                               alt="نشان" 
                               className="w-10 h-10 object-contain p-1" // سایز رو به 40px محدود کردیم و با p-1 فاصله دادیم
                             />
