@@ -395,15 +395,6 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
             )}
 
 
-
-const formatPrice = (price) => {
-  if (price === undefined || price === null || price === "") return null;
-  const digits = String(price).replace(/[^\d]/g, "");
-  if (!digits) return null;
-  return Number(digits).toLocaleString("en-US");
-};
-
-
             {/* Products Section - Infinite loop */}
               {infiniteProducts.length > 0 && (
                 <section className={`rounded-[28px] p-5 shadow-soft border flex flex-col items-center transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
