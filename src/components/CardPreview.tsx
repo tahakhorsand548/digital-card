@@ -518,7 +518,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     );
   }
       if (template === "classic") {
-    const today Persian = ["یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"][new Date().getDay()];
+    const todayPersian = ["یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"][new Date().getDay()];
 
     return (
       <div className="card-preview-scope">
