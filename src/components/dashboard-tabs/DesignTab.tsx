@@ -271,6 +271,26 @@ export default function DesignTab({
                         </button>
                       ))}
                     </div>
+                    <div className="pt-3">
+  <label className="block text-xs font-semibold text-slate-600 mb-2">
+    یا رنگ دلخواه انتخاب کنید:
+  </label>
+
+  <input
+    type="color"
+    value={cardData.design?.colorTheme || "#3B82F6"}
+    onChange={(e) =>
+      setCardData({
+        ...cardData,
+        design: {
+          ...cardData.design,
+          colorTheme: e.target.value,
+        },
+      })
+    }
+    className="w-full h-11 rounded-xl border border-slate-200 cursor-pointer"
+  />
+</div>
                   </div>
                 </div>
               )}
