@@ -516,7 +516,12 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
       </div>
     );
   }
-
+      if (template === "classic") {
+        return (
+            // تمام کد کلاسیک
+            <h2>این دمو کارت کلاسیک است</h2>
+        );
+    }
   // ==========================================
   // FALLBACK for classic / minimalist templates
   // ==========================================
