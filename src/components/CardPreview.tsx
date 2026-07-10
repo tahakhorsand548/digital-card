@@ -299,7 +299,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                       <div className="flex justify-center gap-3 w-full">
                         {b.balad && (
                       <button onClick={() => handleInteraction("balad", b.balad)} className="flex flex-1 justify-center">
-                          <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-1 transition-colors overflow-hidden ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
+                          <div className={`w-17 h-17 rounded-xl shadow-card flex flex-col items-center justify-center gap-1 transition-colors overflow-hidden ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
                             <img 
                               src={baladIcon} 
                               alt="بلد" 
@@ -311,7 +311,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                         )}
                         {b.neshan && (
                           <button onClick={() => handleInteraction("neshan", b.neshan)} className="flex flex-1 justify-center">
-                            <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
+                            <div className={`w-17 h-17 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
                             <img 
                               src={nashanIcon} 
                               alt="نشان" 
@@ -323,7 +323,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                         )}
                         {b.googleMaps && (
                           <button onClick={() => handleInteraction("googleMaps", b.googleMaps)} className="flex flex-1 justify-center">
-                            <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
+                            <div className={`w-17 h-17 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
                             <img 
                               src={googlemapIcon} 
                               alt="گوگل مپ" 
