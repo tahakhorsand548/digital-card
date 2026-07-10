@@ -856,7 +856,6 @@ export default function DesignTab({
             </div>
 
             {/* PRODUCTS Manager (max 5) */}
-            {cardData.products.map((p, idx) => ( 
             <div className="rounded-2xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
               <button
                 type="button"
