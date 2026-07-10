@@ -7,8 +7,6 @@ import {
 import { CardData } from "../types";
 import { apiFetch } from "../utils/api";
 import baladIcon from './img card/logos/images.png';
-import nashanIcon from './img card/logos/images (1).png';
-import googlemapIcon from './img card/logos/google map.png';
 import instagramLogo from "./img card/logos/instagram.png";
 import telegramLogo from "./img card/logos/Telegram.webp";
 import whatsappLogo from "./img card/logos/whatsapp.webp";
@@ -17,6 +15,7 @@ import soroushLogo from "./img card/logos/Soroush.png";
 import baleLogo from "./img card/logos/bale.png";
 import youtubeLogo from "./img card/logos/Youtube.png";
 import aparatLogo from "./img card/logos/aparat.jpg";
+
 interface CardPreviewProps {
   data: CardData;
   username: string;
@@ -25,48 +24,42 @@ interface CardPreviewProps {
 
 export default function CardPreview({ data, username, isPreview = false }: CardPreviewProps) {
   const {
-    businessName,
-    brandManager,
-    slogan,
-    description,
-    logoUrl,
-    bgImageUrl,
-    phones,
-    landlines,
-    branches,
-    website,
-    socials,
-    gallery,
-    products,
-    workingDays,
-    design
+    businessName, brandManager, slogan, description, logoUrl, bgImageUrl, 
+    phones, landlines, branches, website, socials, gallery, products, workingDays, design
   } = data;
 
   const themeHex = design?.colorTheme || "#3B82F6";
   const template = design?.template || "modern";
   
-  // State for Dark Mode
+  // =========================================================
+  // ۱. تمام هوک‌ها (Hooks) باید این بالا باشند (بدون هیچ شرطی)
+  // =========================================================
   const [localIsDark, setLocalIsDark] = useState(design?.isDark ?? false);
+  
+  // استیت‌های مربوط به قالب کلاسیک
+  const [activeSheet, setActiveSheet] = useState<"call" | "map" | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<any>(null);
+  const [lightboxContent, setLightboxContent] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Sync with panel if changed from admin
+  // رفرنس‌های قالب مدرن
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const productsRef = useRef<HTMLDivElement>(null);
+  
+  // رفرنس‌های قالب کلاسیک
+  const classicProductsRef = useRef<HTMLDivElement>(null);
+  const classicGalleryRef = useRef<HTMLDivElement>(null);
+  const classicSocialRef = useRef<HTMLDivElement>(null);
+
+  // دیتای تکرارشونده برای اسکرول بی‌نهایت
+  const infiniteGallery = gallery && gallery.length > 0 ? Array(50).fill(gallery).flat() : [];
+  const infiniteProducts = products && products.length > 0 ? Array(50).fill(products).flat() : [];
+
+  // افکت‌ها (اسکرول‌ها و آپدیت دارک‌مود)
   useEffect(() => {
     setLocalIsDark(design?.isDark ?? false);
   }, [design?.isDark]);
 
-  // A completely isolated mode function that bypasses Tailwind's global "dark:" variants
-  // This guarantees the toggle works perfectly even if the parent app has <body class="dark">
-  const mode = (lightClass: string, darkClass: string) => {
-    return localIsDark ? darkClass : lightClass;
-  };
-
-  const galleryRef = useRef<HTMLDivElement>(null);
-  const productsRef = useRef<HTMLDivElement>(null);
-
-  // Infinite Scroll Arrays (Duplicated 50 times to create a real infinite feel without jumping)
-  const infiniteGallery = gallery && gallery.length > 0 ? Array(50).fill(gallery).flat() : [];
-  const infiniteProducts = products && products.length > 0 ? Array(50).fill(products).flat() : [];
-
-  // Smooth Auto-scroll for Gallery
   useEffect(() => {
     let scrollInterval: NodeJS.Timeout;
     if (infiniteGallery.length > 1) {
@@ -79,7 +72,6 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     return () => clearInterval(scrollInterval);
   }, [infiniteGallery.length]);
 
-  // Smooth Auto-scroll for Products
   useEffect(() => {
     let scrollInterval: NodeJS.Timeout;
     if (infiniteProducts.length > 1) {
@@ -92,7 +84,22 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     return () => clearInterval(scrollInterval);
   }, [infiniteProducts.length]);
 
-  // Click Tracker for Live Cards
+  useEffect(() => {
+    let socialInterval = setInterval(() => {
+      if (classicSocialRef.current) {
+        classicSocialRef.current.scrollBy({ left: -78, behavior: "smooth" });
+      }
+    }, 5000);
+    return () => clearInterval(socialInterval);
+  }, []);
+
+  // =========================================================
+  // ۲. توابع کاربردی (Functions)
+  // =========================================================
+  const mode = (lightClass: string, darkClass: string) => {
+    return localIsDark ? darkClass : lightClass;
+  };
+
   const handleInteraction = async (type: string, url?: string) => {
     if (isPreview) return;
     try {
@@ -100,12 +107,10 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     } catch (e) {
       console.error(e);
     }
-    if (url) {
-      window.open(url, "_blank");
-    }
+    if (url) window.open(url, "_blank");
   };
 
-    const formatPrice = (price?: string | number | null) => {
+  const formatPrice = (price?: string | number | null) => {
     if (price === undefined || price === null || price === "") return null;
     const digits = String(price).replace(/[^\d]/g, "");
     if (!digits) return null;
@@ -133,11 +138,30 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
     };
   };
 
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2200);
+  };
+
+  const handleShare = async () => {
+    const shareData = { title: businessName, text: slogan || '', url: window.location.href };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch (e) {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareData.url);
+        showToast('لینک صفحه کپی شد');
+      } catch (e) {
+        showToast('امکان اشتراک‌گذاری وجود ندارد');
+      }
+    }
+  };
+
   const dayStatus = getDayStatus();
 
-  // ==========================================
-  // ONLY render this advanced UI for "modern" template
-  // ==========================================
+  // =========================================================
+  // ۳. رندر قالب مدرن (Modern)
+  // =========================================================
   if (template === "modern") {
     return (
       <div className="card-preview-scope">
@@ -176,17 +200,12 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
             </div>
 
             <div className="flex flex-col items-center mt-2 relative z-10">
-              {/* Logo - Removed Background and Border entirely */}
-            <div className="w-24 h-24 mt-4 mb-1 flex items-center justify-center overflow-hidden">
-              {logoUrl && (
-                <img
-                  src={logoUrl}
-                  alt="لوگو"
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
-              )}
-            </div>
+              {/* Logo */}
+              <div className="w-24 h-24 mt-4 mb-1 flex items-center justify-center overflow-hidden">
+                {logoUrl && (
+                  <img src={logoUrl} alt="لوگو" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                )}
+              </div>
 
               <h1 className={`text-3xl text-center font-extrabold mb-1 drop-shadow-md ${mode("text-gray-900", "text-white")}`}>
                 {businessName || "نام کسب و کار شما"}
@@ -199,26 +218,17 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
               )}
 
               <div className="text-center px-3 space-y-2 mt-2 drop-shadow-md">
-                {slogan && (
-                  <p className="font-extrabold text-[13px]" style={{ color: themeHex }}>"{slogan}"</p>
-                )}
-                {description && (
-                  <p className={`text-xs leading-relaxed font-bold ${mode("text-gray-800", "text-gray-300")}`}>
-                    {description}
-                  </p>
-                )}
+                {slogan && <p className="font-extrabold text-[13px]" style={{ color: themeHex }}>"{slogan}"</p>}
+                {description && <p className={`text-xs leading-relaxed font-bold ${mode("text-gray-800", "text-gray-300")}`}>{description}</p>}
               </div>
             </div>
           </header>
 
-          {/* Main Content Area */}
           <main className="px-4 py-4 space-y-6 relative z-10">
-            
             {/* Contact Info Card */}
             <section className={`rounded-[28px] p-5 shadow-soft border transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
               <div className="flex flex-col space-y-2.5">
                 
-                {/* Landlines Grouped in ONE box */}
                 {landlines && landlines.filter(Boolean).length > 0 && (
                   <div className={`flex justify-between items-center p-2.5 rounded-2xl transition-colors ${mode("bg-gray-50", "bg-gray-800")}`}>
                     <div className="flex items-center gap-2.5">
@@ -229,12 +239,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                     </div>
                     <div className="flex flex-col gap-1 text-left">
                       {landlines.filter(Boolean).map((l, idx) => (
-                        <button
-                          key={`landline-${idx}`}
-                          onClick={() => handleInteraction("landline", `tel:${l}`)}
-                          className={`text-xs font-bold tracking-wider hover:text-blue-600 transition-colors text-right ${mode("text-gray-800", "text-gray-200")}`}
-                          dir="ltr"
-                        >
+                        <button key={`landline-${idx}`} onClick={() => handleInteraction("landline", `tel:${l}`)} className={`text-xs font-bold tracking-wider hover:text-blue-600 transition-colors text-right ${mode("text-gray-800", "text-gray-200")}`} dir="ltr">
                           {l}
                         </button>
                       ))}
@@ -242,7 +247,6 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                   </div>
                 )}
 
-                {/* Phones Grouped in ONE box */}
                 {phones && phones.filter(Boolean).length > 0 && (
                   <div className={`flex justify-between items-center p-2.5 rounded-2xl transition-colors ${mode("bg-gray-50", "bg-gray-800")}`}>
                     <div className="flex items-center gap-2.5">
@@ -253,12 +257,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                     </div>
                     <div className="flex flex-col gap-1 text-left">
                       {phones.filter(Boolean).map((p, idx) => (
-                        <button
-                          key={`phone-${idx}`}
-                          onClick={() => handleInteraction("phone", `tel:${p}`)}
-                          className={`text-xs font-bold tracking-wider hover:text-blue-600 transition-colors text-right ${mode("text-gray-800", "text-gray-200")}`}
-                          dir="ltr"
-                        >
+                        <button key={`phone-${idx}`} onClick={() => handleInteraction("phone", `tel:${p}`)} className={`text-xs font-bold tracking-wider hover:text-blue-600 transition-colors text-right ${mode("text-gray-800", "text-gray-200")}`} dir="ltr">
                           {p}
                         </button>
                       ))}
@@ -270,13 +269,8 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
               {website && (
                 <>
                   <hr className={`opacity-60 mt-4 mb-3 transition-colors ${mode("border-gray-100", "border-gray-700")}`} />
-                  <button
-                    onClick={() => handleInteraction("website", website)}
-                    className="w-full text-white rounded-2xl py-3 flex justify-center items-center gap-2 text-[13px] font-bold transition-colors shadow-md hover:brightness-110"
-                    style={{ backgroundColor: themeHex }}
-                  >
-                    <Globe className="w-4 h-4" />
-                    بازدید از سایت
+                  <button onClick={() => handleInteraction("website", website)} className="w-full text-white rounded-2xl py-3 flex justify-center items-center gap-2 text-[13px] font-bold transition-colors shadow-md hover:brightness-110" style={{ backgroundColor: themeHex }}>
+                    <Globe className="w-4 h-4" /> بازدید از سایت
                   </button>
                 </>
               )}
@@ -293,42 +287,28 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                   {branches.map((b, idx) => (
                     <div key={`branch-${idx}`} className={`carousel-item opacity-100 scale-100 snap-center shrink-0 w-[85%] rounded-2xl p-4 border flex flex-col items-center transition-colors ${mode("bg-gray-50 border-gray-100", "bg-gray-800 border-gray-700")}`}>
                       <h3 className="font-bold text-sm mb-2" style={{ color: themeHex }}>{b.title || "شعبه اصلی"}</h3>
-                      <p className={`text-[11px] mb-5 text-center leading-relaxed ${mode("text-gray-500", "text-gray-400")}`}>
-                        {b.address || "آدرس ثبت نشده است"}
-                      </p>
+                      <p className={`text-[11px] mb-5 text-center leading-relaxed ${mode("text-gray-500", "text-gray-400")}`}>{b.address || "آدرس ثبت نشده است"}</p>
                       <div className="flex justify-center gap-3 w-full">
                         {b.balad && (
-                      <button onClick={() => handleInteraction("balad", b.balad)} className="flex flex-1 justify-center">
-                          <div className={`w-17 h-17 rounded-xl shadow-card flex flex-col items-center justify-center gap-1 transition-colors overflow-hidden ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
-                            <img 
-                              src={baladIcon} 
-                              alt="بلد" 
-                              className="w-10 h-10 object-contain p-1" // سایز رو به 40px محدود کردیم و با p-1 فاصله دادیم
-                            />
-                            <span className={`text-[10px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>بلد</span>
-                          </div>
-                      </button>
+                          <button onClick={() => handleInteraction("balad", b.balad)} className="flex flex-1 justify-center">
+                            <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-1 transition-colors overflow-hidden ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
+                              <img src={baladIcon} alt="بلد" className="w-10 h-10 object-contain p-1" />
+                              <span className={`text-[10px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>بلد</span>
+                            </div>
+                          </button>
                         )}
                         {b.neshan && (
                           <button onClick={() => handleInteraction("neshan", b.neshan)} className="flex flex-1 justify-center">
-                            <div className={`w-17 h-17 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
-                            <img 
-                              src={nashanIcon} 
-                              alt="نشان" 
-                              className="w-10 h-10 object-contain p-1" // سایز رو به 40px محدود کردیم و با p-1 فاصله دادیم
-                            />
+                            <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
+                              <MapPin className="w-6 h-6 text-blue-500" />
                               <span className={`text-[10px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>نشان</span>
                             </div>
                           </button>
                         )}
                         {b.googleMaps && (
                           <button onClick={() => handleInteraction("googleMaps", b.googleMaps)} className="flex flex-1 justify-center">
-                            <div className={`w-17 h-17 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
-                            <img 
-                              src={googlemapIcon} 
-                              alt="گوگل مپ" 
-                              className="w-10 h-10 object-contain p-1" // سایز رو به 40px محدود کردیم و با p-1 فاصله دادیم
-                            />
+                            <div className={`w-20 h-20 rounded-xl shadow-card flex flex-col items-center justify-center gap-2 transition-colors ${mode("bg-white hover:bg-gray-50", "bg-gray-700 hover:bg-gray-600")}`}>
+                              <MapPin className="w-6 h-6 text-red-500" />
                               <span className={`text-[10px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>گوگل مپ</span>
                             </div>
                           </button>
@@ -354,56 +334,18 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                     let title = key;
                     let btnClass = "bg-gray-800 text-white";
 
-                    if (key === "instagram") {
-                      iconComp = <img src={instagramLogo} alt="Instagram" className="w-6 h-6 object-contain" />;
-                      title = "اینستاگرام";
-                      btnClass = "bg-white";
-                    }
-                    else if (key === "telegram") {
-                      iconComp = <img src={telegramLogo} alt="Telegram" className="w-6 h-6 object-contain" />;
-                      title = "تلگرام";
-                      btnClass = "bg-white";
-                    }
-                    else if (key === "whatsapp") {
-                      iconComp = <img src={whatsappLogo} alt="WhatsApp" className="w-6 h-6 object-contain" />;
-                      title = "واتساپ";
-                      btnClass = "bg-white";
-                    }
-                    else if (key === "rubika") {
-                      iconComp = <img src={rubikaLogo} alt="Rubika" className="w-6 h-6 object-contain" />;
-                      title = "روبیکا";
-                      btnClass = "bg-white";
-                    }
-                    else if (key === "soroush") {
-                      iconComp = <img src={soroushLogo} alt="Soroush" className="w-6 h-6 object-contain" />;
-                      title = "سروش";
-                      btnClass = "bg-white";
-                    }
-                    else if (key === "bale") {
-                      iconComp = <img src={baleLogo} alt="Bale" className="w-6 h-6 object-contain" />;
-                      title = "بله";
-                      btnClass = "bg-white";
-                    }
-                    else if (key === "youtube") {
-                      iconComp = <img src={youtubeLogo} alt="YouTube" className="w-6 h-6 object-contain" />;
-                      title = "یوتیوب";
-                      btnClass = "bg-white";
-                    }
-                    else if (key === "aparat") {
-                      iconComp = <img src={aparatLogo} alt="Aparat" className="w-6 h-6 object-contain" />;
-                      title = "آپارات";
-                      btnClass = "bg-white";
-                    }
+                    if (key === "instagram") { iconComp = <img src={instagramLogo} alt="Instagram" className="w-6 h-6 object-contain" />; title = "اینستاگرام"; btnClass = "bg-white"; }
+                    else if (key === "telegram") { iconComp = <img src={telegramLogo} alt="Telegram" className="w-6 h-6 object-contain" />; title = "تلگرام"; btnClass = "bg-white"; }
+                    else if (key === "whatsapp") { iconComp = <img src={whatsappLogo} alt="WhatsApp" className="w-6 h-6 object-contain" />; title = "واتساپ"; btnClass = "bg-white"; }
+                    else if (key === "rubika") { iconComp = <img src={rubikaLogo} alt="Rubika" className="w-6 h-6 object-contain" />; title = "روبیکا"; btnClass = "bg-white"; }
+                    else if (key === "soroush") { iconComp = <img src={soroushLogo} alt="Soroush" className="w-6 h-6 object-contain" />; title = "سروش"; btnClass = "bg-white"; }
+                    else if (key === "bale") { iconComp = <img src={baleLogo} alt="Bale" className="w-6 h-6 object-contain" />; title = "بله"; btnClass = "bg-white"; }
+                    else if (key === "youtube") { iconComp = <img src={youtubeLogo} alt="YouTube" className="w-6 h-6 object-contain" />; title = "یوتیوب"; btnClass = "bg-white"; }
+                    else if (key === "aparat") { iconComp = <img src={aparatLogo} alt="Aparat" className="w-6 h-6 object-contain" />; title = "آپارات"; btnClass = "bg-white"; }
 
                     return (
-                      <button
-                        key={key}
-                        onClick={() => handleInteraction(key, val)}
-                        className="flex flex-col items-center gap-2 snap-center shrink-0 group"
-                      >
-                        <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-md group-hover:scale-105 transition-transform ${btnClass}`}>
-                          {iconComp}
-                        </div>
+                      <button key={key} onClick={() => handleInteraction(key, val)} className="flex flex-col items-center gap-2 snap-center shrink-0 group">
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-md group-hover:scale-105 transition-transform ${btnClass}`}>{iconComp}</div>
                         <span className={`text-[9px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>{title}</span>
                       </button>
                     );
@@ -412,46 +354,36 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
               </section>
             )}
 
-
-            {/* Products Section - Infinite loop */}
-              {infiniteProducts.length > 0 && (
-                <section className={`rounded-[28px] p-5 shadow-soft border flex flex-col items-center transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Store className="w-4 h-4" style={{ color: themeHex }} />
-                    <h2 className={`font-bold text-sm ${mode("text-gray-800", "text-white")}`}>خدمات و محصولات ما</h2>
-                  </div>
-                  <p className={`text-[11px] mb-5 ${mode("text-gray-500", "text-gray-400")}`}>جدیدترین و بهترین خدمات منتخب ما</p>
-
-                  <div ref={productsRef} className="flex gap-4 overflow-x-auto hide-scrollbar w-full snap-x pb-4">
-                    {infiniteProducts.map((p, idx) => (
-                      <button
-                        key={`prod-${idx}`}
-                        onClick={() => p.link && handleInteraction("product", p.link)}
-                        className={`carousel-item opacity-100 scale-100 rounded-2xl shadow-card p-2 flex flex-col items-center snap-center shrink-0 w-44 border transition-colors hover:scale-95 duration-300 text-right ${mode("bg-white border-gray-100", "bg-gray-800 border-gray-700")}`}
-                      >
-                        <div className={`w-full h-32 rounded-xl overflow-hidden mb-3 relative ${mode("bg-gray-50", "bg-gray-900")}`}>
-                          {p.imageUrl ? (
-                            <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">بدون تصویر</div>
-                          )}
-                        </div>
-                        <h3 className={`text-[11px] font-bold mb-1 w-full truncate text-center ${mode("text-gray-800", "text-gray-100")}`}>{p.title}</h3>
-                        <p className={`text-[9px] text-center mb-2 line-clamp-2 px-1 w-full ${mode("text-gray-400", "text-gray-500")}`}>{p.description}</p>
-
-                        {/* Price Logic: if empty show nothing, if number show formatted number + تومان */}
-                        {formatPrice(p.price) && (
-                          <p className="font-bold text-[13px] mt-auto" style={{ color: themeHex }} dir="ltr">
-                            {formatPrice(p.price)} تومان
-                          </p>
+            {/* Products Section */}
+            {infiniteProducts.length > 0 && (
+              <section className={`rounded-[28px] p-5 shadow-soft border flex flex-col items-center transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <Store className="w-4 h-4" style={{ color: themeHex }} />
+                  <h2 className={`font-bold text-sm ${mode("text-gray-800", "text-white")}`}>خدمات و محصولات ما</h2>
+                </div>
+                <p className={`text-[11px] mb-5 ${mode("text-gray-500", "text-gray-400")}`}>جدیدترین و بهترین خدمات منتخب ما</p>
+                <div ref={productsRef} className="flex gap-4 overflow-x-auto hide-scrollbar w-full snap-x pb-4">
+                  {infiniteProducts.map((p, idx) => (
+                    <button key={`prod-${idx}`} onClick={() => p.link && handleInteraction("product", p.link)} className={`carousel-item opacity-100 scale-100 rounded-2xl shadow-card p-2 flex flex-col items-center snap-center shrink-0 w-44 border transition-colors hover:scale-95 duration-300 text-right ${mode("bg-white border-gray-100", "bg-gray-800 border-gray-700")}`}>
+                      <div className={`w-full h-32 rounded-xl overflow-hidden mb-3 relative ${mode("bg-gray-50", "bg-gray-900")}`}>
+                        {p.imageUrl ? (
+                          <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">بدون تصویر</div>
                         )}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )}
+                      </div>
+                      <h3 className={`text-[11px] font-bold mb-1 w-full truncate text-center ${mode("text-gray-800", "text-gray-100")}`}>{p.title}</h3>
+                      <p className={`text-[9px] text-center mb-2 line-clamp-2 px-1 w-full ${mode("text-gray-400", "text-gray-500")}`}>{p.description}</p>
+                      {formatPrice(p.price) && (
+                        <p className="font-bold text-[13px] mt-auto" style={{ color: themeHex }} dir="ltr">{formatPrice(p.price)} تومان</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
 
-            {/* Image Gallery Section - Infinite loop */}
+            {/* Image Gallery Section */}
             {infiniteGallery.length > 0 && (
               <section className={`rounded-[28px] p-5 shadow-soft border flex flex-col items-center transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
                 <div className="flex items-center gap-2 mb-1">
@@ -459,7 +391,6 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                   <h2 className={`font-bold text-sm ${mode("text-gray-800", "text-white")}`}>گالری تصاویر</h2>
                 </div>
                 <p className={`text-[11px] mb-5 ${mode("text-gray-500", "text-gray-400")}`}>لحظاتی از استایل، کیفیت و رضایت مشتریان ما</p>
-
                 <div ref={galleryRef} className="flex gap-3 overflow-x-auto hide-scrollbar w-full snap-x pb-2">
                   {infiniteGallery.map((imgUrl, idx) => (
                     <div key={`gallery-${idx}`} className="carousel-item opacity-100 scale-100 shrink-0 w-[75%] h-40 rounded-2xl overflow-hidden snap-center shadow-md relative">
@@ -477,7 +408,6 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                   <Clock className="w-4 h-4" style={{ color: themeHex }} />
                   <h2 className={`font-bold text-sm ${mode("text-gray-800", "text-white")}`}>ساعات کاری</h2>
                 </div>
-
                 <div className={`w-full rounded-[28px] p-5 shadow-soft border transition-colors ${mode("bg-white border-purple-50/50", "bg-[#1e293b] border-gray-700/50")}`}>
                   <div className={`flex flex-col space-y-3 text-[13px] font-medium ${mode("text-gray-600", "text-gray-300")}`}>
                     {Object.entries(workingDays).map(([day, val]) => (
@@ -499,10 +429,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
             )}
 
             {/* Bottom Status */}
-            <div
-              className="w-full rounded-full p-1.5 flex justify-between items-center shadow-md mb-8 mt-4 transition-colors"
-              style={{ backgroundColor: themeHex }}
-            >
+            <div className="w-full rounded-full p-1.5 flex justify-between items-center shadow-md mb-8 mt-4 transition-colors" style={{ backgroundColor: themeHex }}>
               <div className={`px-4 py-2 rounded-full text-[11px] font-bold flex items-center gap-2 shadow-sm ${dayStatus.bg}`}>
                 <div className={`w-2 h-2 rounded-full animate-pulse ${dayStatus.dot}`}></div>
                 وضعیت: {dayStatus.text}
@@ -511,7 +438,6 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                 {dayStatus.text === "تعطیل" ? "هم‌اکنون فروشگاه تعطیل است" : "هم‌اکنون فروشگاه باز است"}
               </span>
             </div>
-
           </main>
 
           <footer className="mt-12 w-full text-center px-4 pb-4 space-y-2 select-none relative z-10">
@@ -519,54 +445,17 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
               تمامی حق انتشار و استفاده از این کارت برای پلتفرم <span className={`font-bold ${mode("text-gray-500", "text-gray-400")}`}>کارتت</span> می‌باشد.
               هر گونه کپی‌برداری و یا استفاده غیر قانونی پیگرد قانونی دارد.
             </p>
-            <p className="text-[11px] font-bold" style={{ color: themeHex }}>
-              با کارتت رایگان بسازید
-            </p>
+            <p className="text-[11px] font-bold" style={{ color: themeHex }}>با کارتت رایگان بسازید</p>
           </footer>
         </div>
       </div>
     );
   }
-      if (template === "classic") {
-    // State for Sheets and Lightbox in Classic Theme
-    const [activeSheet, setActiveSheet] = useState<"call" | "map" | null>(null);
-    const [selectedBranch, setSelectedBranch] = useState<any>(null);
-    const [lightboxContent, setLightboxContent] = useState<string | null>(null);
-    const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-    const classicProductsRef = useRef<HTMLDivElement>(null);
-    const classicGalleryRef = useRef<HTMLDivElement>(null);
-    const classicSocialRef = useRef<HTMLDivElement>(null);
-
-    // Auto-scroll logic for Classic
-    useEffect(() => {
-      let socialInterval = setInterval(() => {
-        if (classicSocialRef.current) {
-          classicSocialRef.current.scrollBy({ left: -78, behavior: "smooth" });
-        }
-      }, 5000);
-      return () => clearInterval(socialInterval);
-    }, []);
-
-    const showToast = (msg: string) => {
-      setToastMsg(msg);
-      setTimeout(() => setToastMsg(null), 2200);
-    };
-
-    const handleShare = async () => {
-      const shareData = { title: businessName, text: slogan || '', url: window.location.href };
-      if (navigator.share) {
-        try { await navigator.share(shareData); } catch (e) {}
-      } else {
-        try {
-          await navigator.clipboard.writeText(shareData.url);
-          showToast('لینک صفحه کپی شد');
-        } catch (e) {
-          showToast('امکان اشتراک‌گذاری وجود ندارد');
-        }
-      }
-    };
-
+  // =========================================================
+  // ۴. رندر قالب کلاسیک (Classic) 
+  // =========================================================
+  if (template === "classic") {
     return (
       <div className={`classic-scope app-wrapper ${localIsDark ? "dark-theme" : ""}`}>
         <style dangerouslySetInnerHTML={{
@@ -655,7 +544,6 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
         <div className="relative overflow-hidden px-5 pt-5 pb-8 rounded-b-[32px] shadow-[var(--shadow-soft)] transition-colors"
              style={{ background: `linear-gradient(160deg, var(--theme-main) 0%, var(--theme-light) 100%)` }}>
           
-          {/* Header Background Image with Opacity overlay */}
           {bgImageUrl && (
             <img src={bgImageUrl} alt="پس‌زمینه" className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay pointer-events-none" />
           )}
@@ -668,21 +556,13 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
               <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line></svg>
             </button>
             <button onClick={() => setLocalIsDark(!localIsDark)} className="w-[38px] h-[38px] rounded-xl bg-white/15 border border-white/30 flex items-center justify-center backdrop-blur-sm hover:bg-white/25 transition">
-              {localIsDark ? (
-                <Sun className="w-[18px] h-[18px] text-white" />
-              ) : (
-                <Moon className="w-[18px] h-[18px] text-white" />
-              )}
+              {localIsDark ? <Sun className="w-[18px] h-[18px] text-white" /> : <Moon className="w-[18px] h-[18px] text-white" />}
             </button>
           </div>
 
           <div className="relative z-10 flex flex-col items-center mt-1.5">
             <div className="w-[112px] h-[112px] rounded-full bg-gradient-to-br from-amber-200 to-yellow-400 flex items-center justify-center shadow-[0_8px_20px_-6px_rgba(0,0,0,0.35)] ring-4 ring-white/25 overflow-hidden">
-              {logoUrl ? (
-                <img src={logoUrl} alt="لوگو" className="w-full h-full object-cover" />
-              ) : (
-                <Store className="w-10 h-10 text-amber-900" />
-              )}
+              {logoUrl ? <img src={logoUrl} alt="لوگو" className="w-full h-full object-cover" /> : <Store className="w-10 h-10 text-amber-900" />}
             </div>
             
             <div className="text-white text-[22px] font-extrabold mt-3.5 text-center">{businessName || "نام کسب و کار شما"}</div>
@@ -713,9 +593,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                   <div className="w-[38px] h-[38px] rounded-[11px] bg-[var(--green-bg)] text-[var(--green)] flex items-center justify-center shrink-0">
                     <Phone className="w-[18px] h-[18px]" />
                   </div>
-                  <div className="flex-1 min-w-0 text-right">
-                    <div className="text-[14.5px] font-bold" dir="ltr">{p}</div>
-                  </div>
+                  <div className="flex-1 min-w-0 text-right"><div className="text-[14.5px] font-bold" dir="ltr">{p}</div></div>
                   <button onClick={() => handleInteraction("phone", `tel:${p}`)} className="flex items-center gap-1.5 bg-gradient-to-br from-[var(--theme-main)] to-[var(--theme-light)] text-white font-bold text-[12.5px] border-none rounded-[11px] py-[9px] px-3.5 shadow-md">
                     <Phone className="w-[13px] h-[13px] scale-x-[-1]" /> تماس
                   </button>
@@ -732,9 +610,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                   <div className="w-[38px] h-[38px] rounded-[11px] bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
                     <Phone className="w-[18px] h-[18px]" />
                   </div>
-                  <div className="flex-1 min-w-0 text-right">
-                    <div className="text-[14.5px] font-bold" dir="ltr">{l}</div>
-                  </div>
+                  <div className="flex-1 min-w-0 text-right"><div className="text-[14.5px] font-bold" dir="ltr">{l}</div></div>
                   <button onClick={() => handleInteraction("landline", `tel:${l}`)} className="flex items-center gap-1.5 bg-gradient-to-br from-[var(--theme-main)] to-[var(--theme-light)] text-white font-bold text-[12.5px] border-none rounded-[11px] py-[9px] px-3.5 shadow-md">
                     <Phone className="w-[13px] h-[13px] scale-x-[-1]" /> تماس
                   </button>
@@ -790,7 +666,6 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                   if (!val) return null;
                   let iconComp = <Globe className="w-6 h-6 text-[var(--ink)]" />;
                   let title = key;
-                  
                   if (key === "instagram") { iconComp = <img src={instagramLogo} alt="Instagram" className="w-6 h-6 object-contain" />; title = "اینستاگرام"; }
                   else if (key === "telegram") { iconComp = <img src={telegramLogo} alt="Telegram" className="w-6 h-6 object-contain" />; title = "تلگرام"; }
                   else if (key === "whatsapp") { iconComp = <img src={whatsappLogo} alt="WhatsApp" className="w-6 h-6 object-contain" />; title = "واتساپ"; }
@@ -802,9 +677,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
 
                   return (
                     <button key={`${key}-${idx}`} onClick={() => handleInteraction(key, val)} className="flex flex-col items-center gap-1.5 w-[58px]">
-                      <div className="w-[52px] h-[52px] rounded-2xl bg-[var(--sheet-option-bg)] border border-[var(--sheet-option-border)] flex items-center justify-center shadow-sm">
-                        {iconComp}
-                      </div>
+                      <div className="w-[52px] h-[52px] rounded-2xl bg-[var(--sheet-option-bg)] border border-[var(--sheet-option-border)] flex items-center justify-center shadow-sm">{iconComp}</div>
                       <span className="text-[11px] font-semibold">{title}</span>
                     </button>
                   );
@@ -826,22 +699,14 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                 {infiniteProducts.map((p, idx) => (
                   <div key={idx} className="w-[172px] bg-[var(--product-bg)] border border-[var(--product-border)] rounded-[18px] overflow-hidden snap-start shrink-0">
                     <div className="w-full h-[150px] bg-[var(--gallery-placeholder-bg)]">
-                      {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[var(--muted)] text-xs">بدون تصویر</div>
-                      )}
+                      {p.imageUrl ? <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[var(--muted)] text-xs">بدون تصویر</div>}
                     </div>
                     <div className="p-2.5 pb-3">
                       <div className="text-[13px] font-bold text-[var(--ink)] mb-1 truncate">{p.title}</div>
                       <div className="text-[11px] text-[var(--muted)] leading-[1.6] line-clamp-2 h-[34px] mb-2">{p.description}</div>
                       <div className="flex items-center justify-between gap-1.5">
-                        <button onClick={() => p.link && handleInteraction("product", p.link)} className="bg-gradient-to-br from-[var(--theme-main)] to-[var(--theme-light)] text-white font-bold text-[11px] rounded-[9px] py-[7px] px-3 whitespace-nowrap">
-                          مشاهده
-                        </button>
-                        {formatPrice(p.price) && (
-                          <div className="text-[11.5px] font-bold text-[var(--theme-main)] whitespace-nowrap">{formatPrice(p.price)} تومان</div>
-                        )}
+                        <button onClick={() => p.link && handleInteraction("product", p.link)} className="bg-gradient-to-br from-[var(--theme-main)] to-[var(--theme-light)] text-white font-bold text-[11px] rounded-[9px] py-[7px] px-3 whitespace-nowrap">مشاهده</button>
+                        {formatPrice(p.price) && <div className="text-[11.5px] font-bold text-[var(--theme-main)] whitespace-nowrap">{formatPrice(p.price)} تومان</div>}
                       </div>
                     </div>
                   </div>
@@ -887,9 +752,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                 return (
                   <div key={day} className={`flex justify-between items-center py-2.5 px-2.5 rounded-xl ${isToday ? "bg-[var(--today-bg)] text-[var(--theme-main)]" : ""} ${val.isClosed ? "text-[var(--red)]" : ""}`}>
                     <span className="font-semibold">{day}</span>
-                    <span className="font-semibold" dir="ltr">
-                      {val.isOpen && !val.isClosed ? `${val.openTime} تا ${val.closeTime}` : "تعطیل"}
-                    </span>
+                    <span className="font-semibold" dir="ltr">{val.isOpen && !val.isClosed ? `${val.openTime} تا ${val.closeTime}` : "تعطیل"}</span>
                   </div>
                 );
               })}
@@ -909,7 +772,7 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
           )}
         </div>
 
-        {/* OVERLAYS (Bottom Sheets) */}
+        {/* OVERLAYS */}
         <div className={`fixed inset-0 bg-[var(--ink)]/50 flex items-end justify-center z-[100] transition-opacity ${activeSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} onClick={(e) => { if (e.target === e.currentTarget) setActiveSheet(null); }}>
           <div className={`w-full max-w-[430px] bg-[var(--sheet-bg)] rounded-t-[24px] p-4 pt-2.5 pb-6 transition-transform duration-300 ease-[cubic-bezier(.22,.9,.35,1)] ${activeSheet ? 'translate-y-0' : 'translate-y-full'}`}>
             <div className="w10 h-1 rounded-full bg-[var(--sheet-handle-bg)] mx-auto mb-4 w-[40px]"></div>
@@ -919,13 +782,8 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
                 <div className="text-[15.5px] font-extrabold text-center mb-4">با کدام شماره تماس بگیرم؟</div>
                 {[...(phones || []), ...(landlines || [])].filter(Boolean).map((num, i) => (
                   <a key={i} href={`tel:${num}`} className="flex items-center gap-3 w-full bg-[var(--sheet-option-bg)] border border-[var(--sheet-option-border)] rounded-[14px] p-3.5 mb-2.5 no-underline">
-                    <div className="w-[38px] h-[38px] rounded-[11px] bg-[var(--green-bg)] text-[var(--green)] flex items-center justify-center shrink-0">
-                      <Phone className="w-[19px] h-[19px]" />
-                    </div>
-                    <div className="flex-1 text-right">
-                      <div className="text-[13.5px] font-bold text-[var(--ink)]">تماس تلفنی</div>
-                      <div className="text-[11.5px] text-[var(--muted)] mt-0.5" dir="ltr">{num}</div>
-                    </div>
+                    <div className="w-[38px] h-[38px] rounded-[11px] bg-[var(--green-bg)] text-[var(--green)] flex items-center justify-center shrink-0"><Phone className="w-[19px] h-[19px]" /></div>
+                    <div className="flex-1 text-right"><div className="text-[13.5px] font-bold text-[var(--ink)]">تماس تلفنی</div><div className="text-[11.5px] text-[var(--muted)] mt-0.5" dir="ltr">{num}</div></div>
                   </a>
                 ))}
               </>
@@ -974,13 +832,11 @@ export default function CardPreview({ data, username, isPreview = false }: CardP
       </div>
     );
   }
-  // ==========================================
-  // FALLBACK for classic / minimalist templates
-  // ==========================================
+
   return (
     <div className={`w-full min-h-screen p-8 text-center font-sans ${design?.isDark ? "bg-slate-900 text-slate-100" : "bg-white text-slate-800"}`} dir="rtl">
       <h2 className="text-xl font-bold mb-4">{businessName}</h2>
-      <p className="opacity-70 text-sm mb-4">این نما برای قالب {template} است. لطفاً برای دیدن تغییرات کامل، از پنل کاربری قالب "Modern" را انتخاب کنید.</p>
+      <p className="opacity-70 text-sm mb-4">قالب یافت نشد.</p>
     </div>
   );
 }
