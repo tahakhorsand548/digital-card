@@ -244,13 +244,13 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
         
         {/* Brand Banner Title */}
         <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/20 animate-bounce overflow-hidden">
-          <img
-            src={logo}
-            alt="Logo"
-            className="w-10 h-10 object-contain"
-          />
-        </div>
+<div className="inline-flex items-center justify-center w-16 h-16 animate-bounce">
+  <img
+    src={logo}
+    alt="Logo"
+    className="w-16 h-16 object-cover"
+  />
+</div>
           <h2 className="text-2xl font-extrabold text-white">کارتت | Kartet</h2>
           <p className="text-sm text-slate-400 mt-1.5">پلتفرم ایجاد کارت ویزیت دیجیتال و برچسب هوشمند</p>
         </div>
