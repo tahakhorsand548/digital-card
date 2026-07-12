@@ -15,6 +15,7 @@ import CardPreview from "./components/CardPreview";
 import { User } from "./types";
 import { ShieldCheck, RefreshCw, QrCode, Globe, Info, CreditCard, Flame } from "lucide-react";
 import { apiFetch, removeAuthToken, setAuthToken } from "./utils/api";
+import logo from "../../img/logo/logo-full.png";
 
 // ─── Context برای اشتراک‌گذاری session بین همه صفحات ───────────────────────
 interface AuthCtx {
@@ -240,8 +241,18 @@ function LandingPage() {
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
       <header className="border-b border-slate-200/80 bg-white py-4 px-6 md:px-12 flex justify-between items-center text-right shadow-sm sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-md shadow-blue-200">ك</div>
-          <span className="font-extrabold text-slate-900 text-base">کارتت | Kartet</span>
+          <a
+            href="https://kartt.ir"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center"
+          >
+            <img
+              src={logo}
+              alt="Kartet"
+              className="h-10 w-auto object-contain"
+            />
+          </a>
         </div>
         <div className="flex items-center gap-3">
           {currentUser ? (
