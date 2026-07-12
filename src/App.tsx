@@ -247,11 +247,11 @@ function LandingPage() {
   rel="noopener noreferrer"
   className="inline-flex items-center justify-center"
 >
-  <img
-    src={logo}
-    alt="Kartet"
-    className="h-26 w-auto object-contain"
-  />
+<img
+  src={logo}
+  alt="Kartet"
+  className="h-26 w-auto object-contain -my-3 block"
+/>
 </a>
         </div>
         <div className="flex items-center gap-3">
