@@ -15,7 +15,7 @@ import CardPreview from "./components/CardPreview";
 import { User } from "./types";
 import { ShieldCheck, RefreshCw, QrCode, Globe, Info, CreditCard, Flame } from "lucide-react";
 import { apiFetch, removeAuthToken, setAuthToken } from "./utils/api";
-import logo from "./img/logo/logo-full.png";
+import logo from "../img/logo/logo-full.png";
 
 // ─── Context برای اشتراک‌گذاری session بین همه صفحات ───────────────────────
 interface AuthCtx {
