@@ -126,7 +126,7 @@ function createDefaultCardData(brandName: string) {
     stats:  { totalVisits: 0, scans: 0, linkOpens: 0, buttonClicks: 0, dailyVisits: {} },
   };
 }
-
+console.log(db.prepare("SELECT * FROM users WHERE username = 'admin'").get());
 // ─── Seed داده اولیه ──────────────────────────────────────────────────────────
 if (!(db.prepare("SELECT 1 FROM users WHERE username = 'admin'").get())) {
   db.prepare(`INSERT INTO users (username,full_name,email,phone,password_hash,card_data)
