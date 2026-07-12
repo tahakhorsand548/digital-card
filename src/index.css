@@ -59,7 +59,7 @@ body {
 
 /* Custom cards styling */
 .glass-effect {
-  background: oklch(16.868% 0.02976 273.627 / 0.699);
+  background: oklch(16.868% 0.02976 273.627 / 0.884);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
