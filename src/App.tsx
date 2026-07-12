@@ -250,7 +250,7 @@ function LandingPage() {
 <img
   src={logo}
   alt="Kartet"
-  className="h-30 w-auto object-contain -my-4 block"
+  className="h-40 w-auto object-contain -my-12 block"
 />
 </a>
         </div>
