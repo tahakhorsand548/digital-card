@@ -233,13 +233,13 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
   };
 
   return (
-<div className="min-h-screen rounded-[32px] bg-slate-950 overflow-hidden flex flex-col items-center justify-center px-4 py-8 relative">      
+<div className="min-h-screen rounded-[32px] overflow-hidden flex flex-col items-center justify-center px-4 py-8 relative">      
       {/* Background visual glows */}
       {/* <div className="absolute  bg-slate-950 pointer-events-none glow-animation bg-slate-950" />
       <div className="absolute bottom-1/4 right-1/3 w-72 h-72 rounded-full bg-indigo-600/10 blur-[100px] pointer-events-none glow-animation" /> */}
 
       {/* Main card box */}
-      <div className="w-full max-w-lg bg-slate-950 glass-effect rounded-[30px] p-8 border border-white/5 shadow-2x">
+      <div className="w-full max-w-lg glass-effect rounded-[30px] p-8 border border-white/5 shadow-2x">
         
         {/* Brand Banner Title */}
         <div className="text-center mb-8">
