@@ -233,7 +233,7 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center px-4 py-8 relative">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative">
       
       {/* Background visual glows */}
       <div className="absolute top-1/4 left-1/3 w-72 h-72 rounded-full bg-blue-600/10 blur-[100px] pointer-events-none glow-animation" />
@@ -244,13 +244,13 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
         
         {/* Brand Banner Title */}
         <div className="text-center mb-8">
-<div className="inline-flex items-center justify-center w-16 h-16 animate-bounce">
-  <img
-    src={logo}
-    alt="Logo"
-    className="w-16 h-16 object-cover"
-  />
-</div>
+        <div className="inline-flex items-center justify-center w-16 h-16 animate-bounce">
+          <img
+            src={logo}
+            alt="Logo"
+            className="w-16 h-16 object-cover"
+          />
+        </div>
           <h2 className="text-2xl font-extrabold text-white">کارتت | Kartet</h2>
           <p className="text-sm text-slate-400 mt-1.5">پلتفرم ایجاد کارت ویزیت دیجیتال و برچسب هوشمند</p>
         </div>
