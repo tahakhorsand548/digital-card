@@ -235,7 +235,7 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
   return (
 <div className="min-h-screen rounded-[32px] overflow-hidden flex flex-col items-center justify-center px-4 py-8 relative">      
       {/* Background visual glows */}
-      <div className="absolute top-1/4 left-1/3 w-120 h-180  rounded-full bg-slate-950 pointer-events-none glow-animation bg-slate-950" />
+      <div className="absolute w-120 h-179 bg-slate-950 pointer-events-none glow-animation bg-slate-950" />
       <div className="absolute bottom-1/4 right-1/3 w-72 h-72 rounded-full bg-indigo-600/10 blur-[100px] pointer-events-none glow-animation" />
 
       {/* Main card box */}
