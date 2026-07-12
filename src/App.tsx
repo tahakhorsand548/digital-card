@@ -239,7 +239,7 @@ function LandingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
-      <header className="border-b border-slate-200/80 bg-white py-4 px-6 md:px-12 flex justify-between items-center text-right shadow-sm sticky top-0 z-50">
+      <header className="border-b border-slate-200/80 bg-white py-2 px-6 md:px-12 flex justify-between items-center text-right shadow-sm sticky top-0 z-50">
         <div className="flex items-center">
 <a
   href="https://kartt.ir"
