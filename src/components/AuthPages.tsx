@@ -251,7 +251,7 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
           />
         </div>
           <h2 className="text-2xl font-extrabold text-white">کارتت | Kartet</h2>
-          <p className="text-sm text-slate-400 mt-1.5">پلتفرم ایجاد کارت ویزیت دیجیتال و برچسب هوشمند</p>
+          <p className="text-sm text-slate-400 mt-1.5">پلتفرم ساخت کارت ویزیت دیجیتال</p>
         </div>
 
         {/* 1. LOGIN MODE */}
@@ -320,7 +320,7 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
                 onClick={() => setMode("register")}
                 className="text-xs font-bold text-blue-400 hover:underline hover:text-blue-300"
               >
-                ثبت نام در پلتفرم
+                ثبت نام در کارتِت
               </button>
             </div>
           </form>
@@ -329,7 +329,7 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
         {/* 2. REGISTER MODE */}
         {mode === "register" && (
           <form onSubmit={handleRegisterSubmit} className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-100 border-r-4 border-indigo-500 pr-2.5">عضویت و ایجاد کارت هوشمند جدید</h3>
+            <h3 className="text-lg font-bold text-slate-100 border-r-4 border-indigo-500 pr-2.5">فرم ثبت نام و ایجاد کارت ویزیت دیجیتال</h3>
 
             {regError && (
               <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-right leading-relaxed font-medium">
@@ -345,10 +345,10 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
 
             {/* Name input */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300">نام و نام خانوادگی کامل (یا نام برند) :</label>
+              <label className="text-xs font-bold text-slate-300">نام و نام خانوادگی  :</label>
               <input 
                 type="text"
-                placeholder="مثال: شرکت ایده پرداز وب"
+                placeholder="مثال: آرش بهنامی"
                 value={regFullName}
                 onChange={(e) => setRegFullName(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl py-2.5 px-4 text-sm text-slate-200 outline-none transition"
@@ -357,10 +357,10 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
 
             {/* Alphanumeric Username validation */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300">نام کاربری اختصاصی کارت (بین ۵ تا ۹ کاراکتر - انگلیسی) :</label>
+              <label className="text-xs font-bold text-slate-300">نام کاربری اختصاصی کارت (این هویت برند شما است) :</label>
               <input 
                 type="text"
-                placeholder="مثال: ideapardaz (لینک نهایی: card/ideapardaz)"
+                placeholder="(بین ۵ تا ۹ کاراکتر - انگلیسی)"
                 value={regUsername}
                 onChange={(e) => setRegUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))}
                 className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 rounded-xl py-2.5 px-4 text-sm text-slate-200 outline-none transition font-mono"
@@ -374,7 +374,7 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
 
             {/* Email gmail.com validation */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300">ایمیل معتبر (فرمت gmail.com@) :</label>
+              <label className="text-xs font-bold text-slate-300">ایمیل (فرمت gmail.com@) :</label>
               <input 
                 type="email"
                 placeholder="yourmail@gmail.com"
@@ -386,7 +386,7 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
 
             {/* Phone starting with 09 validation */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300">شماره تلفن همراه (۱۱ کاراکتر - شروع با 09) :</label>
+              <label className="text-xs font-bold text-slate-300">شماره تلفن همراه :</label>
               <input 
                 type="tel"
                 placeholder="09123456789"
@@ -426,7 +426,7 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
               disabled={regLoading}
               className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/15 hover:shadow-indigo-500/25 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
             >
-              {regLoading ? "ثبت اطلاعات ساخت کارت..." : "رونمایی و ایجاد کارت ویزیت دیجیتال"}
+              {regLoading ? "ثبت اطلاعات ساخت کارت..." : "ثبت نام و ورود برای ساخت کارت دیجیتال"}
             </button>
 
             <div className="text-center pt-1">
@@ -438,6 +438,18 @@ export default function AuthPages({ onLoginSuccess, initialMode = "login" }: Aut
               >
                 ورود به حساب کاربری
               </button>
+              <p className="mt-4 text-[11px] leading-5 text-center text-slate-500">
+                ثبت‌نام در سایت به منزله پذیرش{" "}
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-blue-400 hover:text-blue-300 hover:underline"
+                >
+                  قوانین و مقررات
+                </a>{" "}
+                کارتت است.
+              </p>
             </div>
           </form>
         )}

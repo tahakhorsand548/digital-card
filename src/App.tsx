@@ -277,13 +277,13 @@ function LandingPage() {
         <div className="space-y-6">
           <div className="inline-flex items-center gap-2 py-1 px-3 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-xs font-bold leading-none">
             <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
-            <span>پیشروترین پلتفرم ساخت کارت هوشمند در کشور</span>
+            <span>پیشروترین پلتفرم ساخت کارت ویزیت دیجیتال</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight">
             کارت ویزیت کاغذی را فراموش کنید، <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-650">دیجیتالی بدرخشید!</span>
           </h1>
           <p className="text-sm md:text-base text-slate-500 leading-relaxed font-semibold">
-            با کارتت، در کمتر از ۵ دقیقه کارت ویزیت هوشمند اختصاصی خود را بسازید. مجهز به آمارگیر پیشرفته، کاتالوگ محصولات دیجیتال، گالری اسلایدر تصاویر، و سیستم نوبت‌دهی و پشتیبانی آنلاین.
+           با کارتت بدون نیاز به دانش فنی، کارت ویزیت دیجیتال خود را بسازید و لینک اختصاصی دریافت کنید. اطلاعات، شبکه‌های اجتماعی، نمونه‌کار، محصولات، فایل‌ها و راه‌های ارتباطی را در یک صفحه حرفه‌ای قرار دهید.
           </p>
           <div className="flex flex-wrap gap-3 pt-4">
             <button
@@ -294,13 +294,14 @@ function LandingPage() {
             </button>
             <a href="/card/admin" className="py-3.5 px-6 rounded-xl bg-white border border-slate-200 text-slate-705 font-bold text-xs hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
               <Globe className="w-4 h-4 text-blue-650" />
-              مشاهده دمو کارت ادمین
+              مشاهده دمو کارت ها 
             </a>
           </div>
           <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-200">
-            <div><span className="text-xl font-black text-slate-800 font-mono block">۱۰۰٪</span><span className="text-[10px] text-slate-400 font-bold">بروزرسانی زنده آنلاین</span></div>
-            <div><span className="text-xl font-black text-slate-800 font-mono block">۱۹.۵:۹</span><span className="text-[10px] text-slate-400 font-bold">موکاپ آیفون ۱۶ پرو</span></div>
-            <div><span className="text-xl font-black text-slate-800 font-mono block">۲۴ ساعته</span><span className="text-[10px] text-slate-400 font-bold">پشتیبانی آنلاین تیکتی</span></div>
+            <div><span className="text-xl font-black text-slate-800 font-mono block">Free</span><span className="text-[10px] text-slate-400 font-bold">کاملا رایگان برای همه کاربران</span></div>
+            <div><span className="text-xl font-black text-slate-800 font-mono block">QR Code</span><span className="text-[10px] text-slate-400 font-bold">کیوآر کد اختاصی و رایگان</span></div>
+            <div><span className="text-xl font-black text-slate-800 font-mono block">100%</span><span className="text-[10px] text-slate-400 font-bold">ویرایشگر ساده و کاربردی</span></div>
+            <div><span className="text-xl font-black text-slate-800 font-mono block">۲۴ ساعته</span><span className="text-[10px] text-slate-400 font-bold">پشتیبانی آنلاین </span></div>
           </div>
         </div>
         <div className="bg-white p-2 rounded-[32px] border border-slate-200/80 shadow-xl relative">
@@ -312,7 +313,7 @@ function LandingPage() {
       </main>
 
       <footer className="border-t border-slate-200/80 bg-white py-6 px-6 text-center text-[10px] text-slate-400 font-semibold">
-        <p>© ۱۴۰۵ پلتفرم کارتت (Kartet) - کلیه حقوق مادی و معنوی محفوظ می باشد.</p>
+        <p>© ۱۴۰۵ پلتفرم کارتت (Kartt) - کلیه حقوق مادی و معنوی محفوظ می باشد.</p>
       </footer>
     </div>
   );
