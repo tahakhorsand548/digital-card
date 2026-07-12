@@ -131,8 +131,14 @@ function createDefaultCardData(brandName: string) {
 if (!(db.prepare("SELECT 1 FROM users WHERE username = 'admin'").get())) {
   db.prepare(`INSERT INTO users (username,full_name,email,phone,password_hash,card_data)
     VALUES (?,?,?,?,?,?)`)
-    .run("admin","مدیر کل پلتفرم","admin@gmail.com","09121234567",
-      hashPassword("admin"), JSON.stringify(createDefaultCardData("کارت نمونه ادمین")));
+    .run(
+      "admin",
+      "مدیر کل پلتفرم",
+      "tahamahmoodikhorsand@gmail.com",
+      "09153809260",
+      hashPassword("@K20602060k!"),
+      JSON.stringify(createDefaultCardData("کارت نمونه ادمین"))
+    );
 }
 const insertBanner = db.prepare("INSERT OR IGNORE INTO banners (id,image_url,title) VALUES (?,?,?)");
 insertBanner.run("banner1","https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80","کارت ویزیت دیجیتال رایگان خود را بسازید");
