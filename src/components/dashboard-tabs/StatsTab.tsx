@@ -26,7 +26,7 @@ export default function StatsTab({
               سلام "{user.fullName}" گرامی
             </h2>
             <p className="text-xs text-slate-500 font-semibold mt-1.5">
-              به صفحه کنترل پنل و ایجاد کارت ویزیت دیجیتال کارتت خوش آمدید.
+              به صفحه کنترل پنل و ایجاد کارت ویزیت دیجیتال یوکارت خوش آمدید.
             </p>
           </div>
 
@@ -156,48 +156,91 @@ export default function StatsTab({
           </div>
 
           {/* Simulated interactive last 7 days chart - native SVG with CSS transitions */}
-          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm space-y-4">
-            <h3 className="font-extrabold text-sm text-slate-800">
-              نمودار بازدیدهای ۷ روز اخیر کارت شما (تاریخ شمسی)
-            </h3>
+<div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+  <div className="flex items-center justify-between">
+    <h3 className="font-extrabold text-sm text-slate-800">
+      نمودار بازدیدهای ۷ روز اخیر کارت شما
+    </h3>
 
-            <div className="relative w-full h-[220px] flex items-end justify-between pt-6 pr-4">
-              {chartData.map((d, idx) => {
-                const percent = (d.value / maxChartVal) * 100;
-                return (
-                  <div
-                    key={idx}
-                    className="flex-1 flex flex-col items-center group relative z-10"
-                  >
-                    {/* Bar hover indicator tooltip */}
-                    <span className="absolute -top-6 bg-slate-850 text-white font-bold font-mono text-[10px] px-2 py-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition duration-200">
-                      {d.value} بازدید
-                    </span>
+    <span className="text-xs text-slate-500">
+      تاریخ شمسی
+    </span>
+  </div>
 
-                    {/* SVG representation or clean bar */}
-                    <div
-                      className="w-8 bg-gradient-to-t from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 rounded-t-lg transition-all duration-500 relative"
-                      style={{ height: `${Math.max(percent, 8)}%` }}
-                    >
-                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 rounded-t-lg transition" />
-                    </div>
+  <div className="relative h-[240px]">
 
-                    <span className="text-[10px] text-slate-500 font-bold mt-2 truncate w-full text-center">
-                      {d.label}
-                    </span>
-                  </div>
-                );
-              })}
+    {/* Background lines */}
+    <div className="absolute inset-0 flex flex-col justify-between pb-8 pointer-events-none">
+      {[0,1,2,3,4].map((i) => (
+        <div
+          key={i}
+          className="border-t border-slate-200 w-full"
+        />
+      ))}
+    </div>
 
-              {/* Background grid indicators */}
-              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-5">
-                <div className="border-b border-slate-400 w-full h-0" />
-                <div className="border-b border-slate-400 w-full h-0" />
-                <div className="border-b border-slate-400 w-full h-0" />
-                <div className="border-b border-slate-400 w-full h-0" />
+    {/* Bars */}
+    <div className="absolute inset-0 flex items-end justify-between gap-2 pb-8">
+      {chartData.map((d, idx) => {
+        const percent =
+          maxChartVal > 0
+            ? (d.value / maxChartVal) * 100
+            : 0;
+
+        return (
+          <div
+            key={idx}
+            className="flex-1 flex flex-col items-center justify-end h-full group relative"
+          >
+            {/* Tooltip */}
+            <div className="absolute bottom-[calc(var(--bar-height)+55px)] opacity-0 group-hover:opacity-100 transition-all duration-200 z-20">
+              <div className="bg-slate-900 text-white text-[11px] font-bold px-2 py-1 rounded-lg whitespace-nowrap shadow-lg">
+                {d.value} بازدید
               </div>
             </div>
+
+            {/* Bar */}
+            <div
+              className="
+                w-full max-w-[38px]
+                rounded-t-xl
+                bg-gradient-to-t
+                from-blue-600
+                via-blue-500
+                to-cyan-400
+                shadow-lg
+                transition-all
+                duration-500
+                hover:scale-105
+                hover:brightness-110
+                relative
+                overflow-hidden
+              "
+              style={{
+                height: `${Math.max(percent, d.value > 0 ? 12 : 4)}%`,
+                ['--bar-height' as any]:
+                  `${Math.max(percent, d.value > 0 ? 12 : 4)}%`
+              }}
+            >
+              {/* Shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent opacity-60" />
+            </div>
+
+            {/* Value */}
+            <span className="mt-2 text-xs font-bold text-slate-700">
+              {d.value}
+            </span>
+
+            {/* Date label */}
+            <span className="text-[10px] text-slate-500 mt-1 text-center leading-4">
+              {d.label}
+            </span>
           </div>
+        );
+      })}
+    </div>
+  </div>
+</div>
 
           {/* Sub-Banners (Banner 2 & 3) */}
           {banners.length > 1 && (
