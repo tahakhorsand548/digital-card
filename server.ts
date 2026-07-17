@@ -488,9 +488,16 @@ app.post("/api/user/:username/tickets/:ticketId/messages", verifyToken, (req: an
   if (ticket.status === "ended") return res.status(400).json({ message: "این تیکت بسته شده." });
 
   const messages = JSON.parse(ticket.messages);
-  const newMsg   = { id: "msg-" + Date.now(),
-    sender: req.username === "admin" ? "support" : "user", message,
-    createdAt: new Date().toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }) };
+const newMsg = {
+  id: "msg-" + Date.now(),
+  sender: req.username === "admin" ? "support" : "user",
+  message,
+  createdAt: new Date().toLocaleTimeString("fa-IR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Tehran"
+  })
+};
   messages.push(newMsg);
   const newStatus = req.username !== "admin" ? "under_review" : ticket.status;
   db.prepare("UPDATE tickets SET messages=?, status=? WHERE id=?").run(JSON.stringify(messages), newStatus, ticketId);
