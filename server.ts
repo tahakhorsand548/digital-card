@@ -446,9 +446,29 @@ app.post("/api/user/:username/tickets", verifyToken, (req: any, res) => {
     id: "ticket-" + Date.now(), username,
     user_fullname: user?.full_name || "کاربر",
     title, description, status: "pending",
-    created_at: now.toLocaleDateString("fa-IR") + " - " + now.toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }),
-    messages: JSON.stringify([{ id: "msg-1", sender: "user", message: description,
-      createdAt: now.toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" }) }]),
+created_at:
+  now.toLocaleDateString("fa-IR", {
+    timeZone: "Asia/Tehran"
+  }) +
+  " - " +
+  now.toLocaleTimeString("fa-IR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Tehran"
+  }),
+
+messages: JSON.stringify([
+  {
+    id: "msg-1",
+    sender: "user",
+    message: description,
+    createdAt: now.toLocaleTimeString("fa-IR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Tehran"
+    })
+  }
+]),
   };
   db.prepare("INSERT INTO tickets (id,username,user_fullname,title,description,status,created_at,messages) VALUES (?,?,?,?,?,?,?,?)")
     .run(newTicket.id, newTicket.username, newTicket.user_fullname, newTicket.title,
