@@ -180,7 +180,7 @@ export default function StatsTab({
     </div>
 
     {/* Bars */}
-    <div className="absolute inset-0 flex items-end justify-between gap-2 pb-8">
+    <div className="absolute inset-0 flex items-end justify-between gap-2">
       {chartData.map((d, idx) => {
         const percent =
           maxChartVal > 0

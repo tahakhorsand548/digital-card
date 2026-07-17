@@ -67,6 +67,20 @@ export default function AdminPanel({
     cardsWithQr: 0,
     totalVisits: 0,
   });
+  //serch user
+  const [userSearch, setUserSearch] = useState("");
+const filteredUsers = usersList.filter((u) => {
+  const search = userSearch.toLowerCase().trim();
+
+  return (
+    u.fullName?.toLowerCase().includes(search) ||
+    u.username?.toLowerCase().includes(search) ||
+    u.email?.toLowerCase().includes(search) ||
+    u.phone?.toLowerCase().includes(search)
+  );
+});
+
+
   const [usersList, setUsersList] = useState<User[]>([]);
   const [qrRequests, setQrRequests] = useState<any[]>([]);
   const [ticketsList, setTicketsList] = useState<Ticket[]>([]);
@@ -870,6 +884,45 @@ export default function AdminPanel({
               </div>
             </div>
 
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="relative w-full max-w-md">
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="جستجو بر اساس نام، نام کاربری، ایمیل یا شماره تماس..."
+                  className="
+                    w-full
+                    bg-slate-900
+                    border border-slate-700
+                    rounded-xl
+                    py-3 pr-4 pl-4
+                    text-white
+                    placeholder:text-slate-500
+                    focus:outline-none
+                    focus:ring-2
+                    focus:ring-blue-500
+                    focus:border-blue-500
+                  "
+                />
+
+                {userSearch && (
+                  <button
+                    onClick={() => setUserSearch("")}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <div className="text-xs text-slate-400 whitespace-nowrap">
+                {filteredUsers.length} کاربر یافت شد
+              </div>
+            </div>
+
+
             <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 overflow-x-auto">
               <table className="w-full text-xs text-right border-collapse">
                 <thead>
@@ -885,17 +938,17 @@ export default function AdminPanel({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {usersList.length === 0 ? (
+                  {filteredUsers.length === 0 ? (
                     <tr>
                       <td
                         colSpan={6}
                         className="text-center py-6 text-slate-500"
                       >
-                        تاکنون هیچ کاربری ثبت نام نکرده است.
+                       هیچ کاربری با این مشخصات پیدا نشد.
                       </td>
                     </tr>
                   ) : (
-                    usersList.map((u) => (
+                    filteredUsers.map((u) => (
                       <tr key={u.username} className="hover:bg-slate-950/20">
                         <td className="py-3 px-2 text-slate-100 font-bold">
                           {u.fullName}
@@ -912,11 +965,11 @@ export default function AdminPanel({
                         <td className="py-3 px-2 text-center">
                           {u.isSuspended ? (
                             <span className="py-0.5 px-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-full font-bold text-[10px]">
-                              تعلیق شده 🔴
+                              تعلیق شده 
                             </span>
                           ) : (
                             <span className="py-0.5 px-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full font-bold text-[10px]">
-                              فعال 🟢
+                              فعال 
                             </span>
                           )}
                         </td>
