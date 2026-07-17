@@ -69,6 +69,10 @@ export default function AdminPanel({
   });
   //serch user
   const [userSearch, setUserSearch] = useState("");
+
+
+  const [usersList, setUsersList] = useState<User[]>([]);
+
 const filteredUsers = usersList.filter((u) => {
   const search = userSearch.toLowerCase().trim();
 
@@ -81,7 +85,6 @@ const filteredUsers = usersList.filter((u) => {
 });
 
 
-  const [usersList, setUsersList] = useState<User[]>([]);
   const [qrRequests, setQrRequests] = useState<any[]>([]);
   const [ticketsList, setTicketsList] = useState<Ticket[]>([]);
   const [announcements, setAnnouncements] = useState<GlobalAnnouncement[]>([]);
