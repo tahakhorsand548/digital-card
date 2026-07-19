@@ -182,64 +182,64 @@ export default function DesignTab({
               {openDesignSection === "design" && (
                 <div className="p-5 border-t border-slate-100 space-y-4">
                   {/* 3 Templates choices */}
-{/* Template Choices */}
-<div className="grid grid-cols-3 gap-3">
+                  {/* Template Choices */}
+                  <div className="grid grid-cols-3 gap-3">
 
-  {/* Modern */}
-  <button
-    onClick={() =>
-      setCardData({
-        ...cardData,
-        design: {
-          ...cardData.design,
-          template: "modern",
-        },
-      })
-    }
-    className={`p-3 rounded-xl border text-center font-bold text-xs transition ${
-      cardData.design?.template === "modern"
-        ? "bg-blue-600 border-blue-600 text-white"
-        : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
-    }`}
-  >
-    مدرن
-  </button>
+                    {/* Modern */}
+                    <button
+                      onClick={() =>
+                        setCardData({
+                          ...cardData,
+                          design: {
+                            ...cardData.design,
+                            template: "modern",
+                          },
+                        })
+                      }
+                      className={`p-3 rounded-xl border text-center font-bold text-xs transition ${
+                        cardData.design?.template === "modern"
+                          ? "bg-blue-600 border-blue-600 text-white"
+                          : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+                      }`}
+                    >
+                      مدرن
+                    </button>
 
-  {/* Classic */}
-  <button
-    onClick={() =>
-      setCardData({
-        ...cardData,
-        design: {
-          ...cardData.design,
-          template: "classic",
-        },
-      })
-    }
-    className={`p-3 rounded-xl border text-center font-bold text-xs transition ${
-      cardData.design?.template === "classic"
-        ? "bg-blue-600 border-blue-600 text-white"
-        : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
-    }`}
-  >
-    کلاسیک
-  </button>
+                    {/* Classic */}
+                    <button
+                      onClick={() =>
+                        setCardData({
+                          ...cardData,
+                          design: {
+                            ...cardData.design,
+                            template: "classic",
+                          },
+                        })
+                      }
+                      className={`p-3 rounded-xl border text-center font-bold text-xs transition ${
+                        cardData.design?.template === "classic"
+                          ? "bg-blue-600 border-blue-600 text-white"
+                          : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+                      }`}
+                    >
+                      کلاسیک
+                    </button>
 
-  {/* Premium */}
-  <div className="relative">
-    <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full font-bold z-10">
-      بزودی
-    </span>
+                    {/* Premium */}
+                    <div className="relative">
+                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full font-bold z-10">
+                        بزودی
+                      </span>
 
-      <button
-        onClick={() => setShowSubscriptionModal(true)}
-        className="w-full p-3 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-center font-bold text-xs hover:scale-[1.02] transition-all"
-      >
-        👑 پلن حرفه‌ای
-      </button>
-  </div>
+                        <button
+                          onClick={() => setShowSubscriptionModal(true)}
+                          className="w-full p-3 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-center font-bold text-xs hover:scale-[1.02] transition-all"
+                        >
+                          👑 پلن حرفه‌ای
+                        </button>
+                    </div>
 
-</div>
+                  </div>
 
                   {/* Dark & Light toggle option */}
                   <div className="flex items-center justify-between border-t border-slate-100 pt-4">
@@ -316,25 +316,25 @@ export default function DesignTab({
                       ))}
                     </div>
                     <div className="pt-3">
-  <label className="block text-xs font-semibold text-slate-600 mb-2">
-    یا رنگ دلخواه انتخاب کنید:
-  </label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-2">
+                      یا رنگ دلخواه انتخاب کنید:
+                    </label>
 
-  <input
-    type="color"
-    value={cardData.design?.colorTheme || "#3B82F6"}
-    onChange={(e) =>
-      setCardData({
-        ...cardData,
-        design: {
-          ...cardData.design,
-          colorTheme: e.target.value,
-        },
-      })
-    }
-    className="w-full h-11 rounded-xl border border-slate-200 cursor-pointer"
-  />
-</div>
+                    <input
+                      type="color"
+                      value={cardData.design?.colorTheme || "#3B82F6"}
+                      onChange={(e) =>
+                        setCardData({
+                          ...cardData,
+                          design: {
+                            ...cardData.design,
+                            colorTheme: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full h-11 rounded-xl border border-slate-200 cursor-pointer"
+                    />
+                  </div>
                   </div>
                 </div>
               )}
@@ -1395,7 +1395,8 @@ export default function DesignTab({
           <div className="xl:sticky xl:top-6 bg-slate-100 p-6 rounded-[40px] border border-slate-200/80 flex items-center justify-center shadow-inner">
             <IPhoneMockup data={cardData} username={user.username} />
           </div>
+          <SubscriptionModal />
         </div>
-        <SubscriptionModal />
+
   );
 }
