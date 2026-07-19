@@ -203,7 +203,7 @@ function getUser(username: string): any | null {
     cardData: JSON.parse(row.card_data || "{}") };
 }
 function getUserSubscription(username: string): any | null {
-  return db
+  let sub = db
     .prepare(
       `SELECT *
        FROM subscriptions
@@ -211,6 +211,45 @@ function getUserSubscription(username: string): any | null {
        LIMIT 1`
     )
     .get(username) as any;
+
+  if (!sub) {
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      INSERT INTO subscriptions
+      (
+        id,
+        username,
+        plan,
+        status,
+        start_date,
+        expire_date,
+        created_at,
+        updated_at
+      )
+      VALUES (?,?,?,?,?,?,?,?)
+    `).run(
+      "sub-" + Date.now(),
+      username,
+      "free",
+      "free",
+      now,
+      "",
+      now,
+      now
+    );
+
+    sub = db
+      .prepare(
+        `SELECT *
+         FROM subscriptions
+         WHERE LOWER(username)=LOWER(?)
+         LIMIT 1`
+      )
+      .get(username) as any;
+  }
+
+  return sub;
 }
 
 // ─── WebSocket Manager ────────────────────────────────────────────────────────
