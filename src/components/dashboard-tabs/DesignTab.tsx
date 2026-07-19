@@ -84,7 +84,9 @@ export default function DesignTab({
   editSocial,
 }: DesignTabProps) {
   const [showSubscriptionModal, setShowSubscriptionModal] = React.useState(false);
-
+const [selectedPlan, setSelectedPlan] = React.useState<
+  "free" | "3months" | "6months" | "12months" | null
+>(null);
 
   return (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start text-right">
@@ -1374,30 +1376,59 @@ export default function DesignTab({
 
               <div className="space-y-3">
 
-                <button className="w-full rounded-xl border p-3 hover:border-blue-500">
-                  رایگان
+                <button
+                  onClick={() => setSelectedPlan("free")}
+                >
+                رایگان
+                </button> 
+
+                  <button
+                    onClick={() => setSelectedPlan("3months")}
+                    className={`w-full rounded-xl border p-3 transition ${
+                      selectedPlan === "3months"
+                        ? "border-blue-600 bg-blue-50"
+                        : "hover:border-blue-500"
+                    }`}
+                  >
+                سه ماهه
+                  </button>
+
+              <button
+                onClick={() => setSelectedPlan("6months")}
+                className={`w-full rounded-xl border p-3 transition ${
+                  selectedPlan === "6months"
+                    ? "border-blue-600 bg-blue-50"
+                    : "hover:border-blue-500"
+                }`}
+              >
+                شش ماهه
                 </button>
 
-                <button className="w-full rounded-xl border p-3 hover:border-blue-500">
-                  سه ماهه
-                </button>
+              <button
+                onClick={() => setSelectedPlan("1year")}
+                className={`w-full rounded-xl border p-3 transition ${
+                  selectedPlan === "1year"
+                    ? "border-blue-600 bg-blue-50"
+                    : "hover:border-blue-500"
+                }`}
+              >
+              یک ساله
+              </button>
 
-                <button className="w-full rounded-xl border p-3 hover:border-blue-500">
-                  شش ماهه
-                </button>
-
-                <button className="w-full rounded-xl border p-3 hover:border-blue-500">
-                  یک ساله
-                </button>
+                        <button
+            disabled={!selectedPlan}
+            className="w-full mt-5 rounded-xl bg-blue-600 text-white p-3 font-bold disabled:opacity-50"
+          >
+            ادامه و پرداخت
+          </button>
 
               </div>
-
             </div>
           </div>
         )}
 
 
-        
+
         </div>
         
 
