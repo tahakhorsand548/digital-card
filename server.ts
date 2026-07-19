@@ -711,7 +711,7 @@ app.post("/api/admin/banners", verifyAdmin, (req, res) => {
 // ──────────────────────────────────────────────────────────────────────────
 // API: وضعیت اشتراک کاربر
 // ──────────────────────────────────────────────────────────────────────────
-app.get('/api/subscription', authRequired, (req: any, res) => {
+app.get('/api/subscription', verifyToken, (req: any, res) => {
   const sub = getUserSubscription(req.username);
 
   if (!sub) {
