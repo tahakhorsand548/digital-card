@@ -212,35 +212,7 @@ function getUserSubscription(username: string): any | null {
     )
     .get(username) as any;
 }
-// ─── Helper: اشتراک کاربر ────────────────────────────────────────────────
-function getUserSubscription(username: string) {
-  const row = db.prepare(
-    `SELECT * FROM subscriptions WHERE LOWER(username)=LOWER(?)`
-  ).get(username) as any;
 
-  if (!row) return null;
-
-  // بررسی انقضای اشتراک
-  if (row.status === 'active' && row.expire_date) {
-    const expire = new Date(row.expire_date);
-    if (expire.getTime() < Date.now()) {
-      db.prepare(`
-        UPDATE subscriptions
-        SET status='expired', updated_at=?
-        WHERE username=?
-      `).run(new Date().toISOString(), username);
-
-      row.status = 'expired';
-    }
-  }
-
-  return row;
-}
-
-function hasActivePro(username: string): boolean {
-  const sub = getUserSubscription(username);
-  return !!sub && sub.status === 'active';
-}
 // ─── WebSocket Manager ────────────────────────────────────────────────────────
 interface WsClient { ws: WebSocket; ticketId: string | null; username: string; role: "user"|"admin"; }
 const wsClients: WsClient[] = [];
