@@ -84,6 +84,50 @@ export default function DesignTab({
   editSocial,
 }: DesignTabProps) {
   const [showSubscriptionModal, setShowSubscriptionModal] = React.useState(false);
+
+{showSubscriptionModal && (
+  <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4">
+    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 relative">
+
+      <button
+        onClick={() => setShowSubscriptionModal(false)}
+        className="absolute top-3 left-3 text-gray-500 hover:text-red-500 text-xl"
+      >
+        ✕
+      </button>
+
+      <h2 className="text-xl font-bold text-center mb-2">
+        اشتراک حرفه‌ای
+      </h2>
+
+      <p className="text-sm text-gray-500 text-center mb-6">
+        یکی از پلن‌های زیر را انتخاب کنید.
+      </p>
+
+      <div className="space-y-3">
+
+        <button className="w-full rounded-xl border p-3 hover:border-blue-500">
+          رایگان
+        </button>
+
+        <button className="w-full rounded-xl border p-3 hover:border-blue-500">
+          سه ماهه
+        </button>
+
+        <button className="w-full rounded-xl border p-3 hover:border-blue-500">
+          شش ماهه
+        </button>
+
+        <button className="w-full rounded-xl border p-3 hover:border-blue-500">
+          یک ساله
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+)}
+
   return (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start text-right">
           {/* Input fields panel (right side in Arabic view) */}
@@ -1352,5 +1396,6 @@ export default function DesignTab({
             <IPhoneMockup data={cardData} username={user.username} />
           </div>
         </div>
+        <SubscriptionModal />
   );
 }
