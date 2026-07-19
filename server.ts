@@ -117,6 +117,14 @@ db.exec(`
   is_active INTEGER NOT NULL DEFAULT 1,
   sort_order INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS subscription_features (
+  id TEXT PRIMARY KEY,
+  plan_id TEXT NOT NULL,
+  feature_key TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  FOREIGN KEY(plan_id) REFERENCES subscription_plans(id) ON DELETE CASCADE
+);
 `);
 
 // ─── رمزگذاری ─────────────────────────────────────────────────────────────────
@@ -195,6 +203,16 @@ insertPlan.run("free", "رایگان", 0, 0, 1, 1, 1);
 insertPlan.run("3m", "سه ماهه", 3, 0, 0, 1, 2);
 insertPlan.run("6m", "شش ماهه", 6, 0, 0, 1, 3);
 insertPlan.run("1y", "یک ساله", 12, 0, 0, 1, 4);
+
+const insertFeature = db.prepare(`
+INSERT OR IGNORE INTO subscription_features
+(id,plan_id,feature_key,enabled)
+VALUES (?,?,?,?)
+`);
+
+insertFeature.run("free-modern", "free", "modern_editor", 1);
+insertFeature.run("free-classic", "free", "classic_editor", 1);
+insertFeature.run("free-pro", "free", "pro_editor", 1);
 
 const allUsers = db.prepare("SELECT username FROM users").all() as { username: string }[];
 
