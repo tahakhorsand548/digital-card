@@ -1,3 +1,5 @@
+
+import axios from "axios";
 import "dotenv/config";
 import express from "express";
 import path from "path";
@@ -877,10 +879,43 @@ app.post("/api/payment/create", verifyToken, async (req: any, res) => {
 
   }
 
-  return res.json({
-    amount,
-    plan
-  });
+  try {
+
+    const result = await axios.post(
+      "https://payment.zarinpal.com/pg/v4/payment/request.json",
+      {
+
+        merchant_id: process.env.ZARINPAL_MERCHANT_ID,
+
+        amount,
+
+        description: `اشتراک ${plan}`,
+
+        callback_url:
+          `${process.env.BASE_URL}/api/payment/verify?plan=${plan}`
+
+      }
+    );
+
+    const authority =
+      result.data.data.authority;
+
+    return res.json({
+
+      url:
+        `https://payment.zarinpal.com/pg/StartPay/${authority}`
+
+    });
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+      message: "خطا در ایجاد پرداخت"
+    });
+
+  }
 
 });
 
