@@ -1378,6 +1378,11 @@ const [selectedPlan, setSelectedPlan] = React.useState<
 
                 <button
                   onClick={() => setSelectedPlan("free")}
+                  className={`w-full rounded-xl border p-3 transition ${
+                    selectedPlan === "free"
+                      ? "border-blue-600 bg-blue-50"
+                      : "hover:border-blue-500"
+                  }`}
                 >
                 رایگان
                 </button> 
