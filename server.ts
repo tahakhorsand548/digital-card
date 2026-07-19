@@ -342,7 +342,33 @@ app.post("/api/auth/register", (req, res) => {
   try {
     db.prepare(`INSERT INTO users (username,full_name,email,phone,password_hash,card_data) VALUES (?,?,?,?,?,?)`)
       .run(u, fullName, email.trim(), phone.trim(), hashPassword(password), JSON.stringify(createDefaultCardData(fullName)));
-  } catch (err: any) {
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    INSERT INTO subscriptions
+    (
+      id,
+      username,
+      plan,
+      status,
+      start_date,
+      expire_date,
+      created_at,
+      updated_at
+    )
+    VALUES (?,?,?,?,?,?,?,?)
+  `).run(
+    "sub-" + Date.now(),
+    u,
+    "free",
+    "free",
+    now,
+    "",
+    now,
+    now
+  );
+
+} catch (err: any) {
     if (err.message?.includes("UNIQUE")) {
       if (err.message.includes("email")) return res.status(400).json({ message: "این ایمیل قبلاً ثبت شده." });
       if (err.message.includes("phone")) return res.status(400).json({ message: "این شماره قبلاً ثبت شده." });
