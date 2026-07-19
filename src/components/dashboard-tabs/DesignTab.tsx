@@ -1421,7 +1421,26 @@ const [selectedPlan, setSelectedPlan] = React.useState<
               </button>
 
                         <button
-            disabled={!selectedPlan}
+            onClick={async () => {
+
+  if (!selectedPlan) return;
+
+  const res = await fetch("/api/payment/create",{
+    method:"POST",
+    credentials:"include",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({
+      plan:selectedPlan
+    })
+  });
+
+  const data = await res.json();
+
+  console.log(data);
+
+}}
             className="w-full mt-5 rounded-xl bg-blue-600 text-white p-3 font-bold disabled:opacity-50"
           >
             ادامه و پرداخت

@@ -847,6 +847,44 @@ app.get("/api/subscription/plans", (req, res) => {
   return res.json(plans);
 });
 
+
+
+
+app.post("/api/payment/create", verifyToken, async (req: any, res) => {
+
+  const { plan } = req.body;
+
+  let amount = 0;
+
+  switch (plan) {
+
+    case "3months":
+      amount = 890000;
+      break;
+
+    case "6months":
+      amount = 1590000;
+      break;
+
+    case "1year":
+      amount = 2790000;
+      break;
+
+    default:
+      return res.status(400).json({
+        message: "پلن نامعتبر است."
+      });
+
+  }
+
+  return res.json({
+    amount,
+    plan
+  });
+
+});
+
+
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 async function bootstrap() {
   if (process.env.NODE_ENV !== "production") {
