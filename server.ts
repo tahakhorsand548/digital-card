@@ -824,6 +824,29 @@ app.get('/api/subscription', verifyToken, (req: any, res) => {
   });
 });
 
+
+
+// ──────────────────────────────────────────────────────────────────────────
+// API: لیست پلن‌های اشتراک
+// ──────────────────────────────────────────────────────────────────────────
+app.get("/api/subscription/plans", (req, res) => {
+  const plans = db.prepare(`
+    SELECT
+      id,
+      title,
+      months,
+      price,
+      is_free,
+      is_active,
+      sort_order
+    FROM subscription_plans
+    WHERE is_active = 1
+    ORDER BY sort_order ASC
+  `).all();
+
+  return res.json(plans);
+});
+
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 async function bootstrap() {
   if (process.env.NODE_ENV !== "production") {
