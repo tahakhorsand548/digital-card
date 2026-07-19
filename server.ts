@@ -108,6 +108,15 @@ db.exec(`
     approved_by       TEXT NOT NULL DEFAULT '',
     FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
   );
+  CREATE TABLE IF NOT EXISTS subscription_plans (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  months INTEGER NOT NULL,
+  price INTEGER NOT NULL,
+  is_free INTEGER NOT NULL DEFAULT 0,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
 `);
 
 // ─── رمزگذاری ─────────────────────────────────────────────────────────────────
@@ -175,6 +184,17 @@ const insertBanner = db.prepare("INSERT OR IGNORE INTO banners (id,image_url,tit
 insertBanner.run("banner1","https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80","کارت ویزیت دیجیتال رایگان خود را بسازید");
 insertBanner.run("banner2","https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=800&q=80","چاپ کارت فیزیکی با برچسب هوشمند NFC");
 insertBanner.run("banner3","https://images.unsplash.com/photo-1600132806370-bf17e65e942f?w=800&q=80","کسب و کار خود را در نقشه گوگل ثبت کنید");
+
+const insertPlan = db.prepare(`
+INSERT OR IGNORE INTO subscription_plans
+(id,title,months,price,is_free,is_active,sort_order)
+VALUES (?,?,?,?,?,?,?)
+`);
+
+insertPlan.run("free", "رایگان", 0, 0, 1, 1, 1);
+insertPlan.run("3m", "سه ماهه", 3, 0, 0, 1, 2);
+insertPlan.run("6m", "شش ماهه", 6, 0, 0, 1, 3);
+insertPlan.run("1y", "یک ساله", 12, 0, 0, 1, 4);
 
 const allUsers = db.prepare("SELECT username FROM users").all() as { username: string }[];
 
