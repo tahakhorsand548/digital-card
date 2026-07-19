@@ -77,6 +77,37 @@ db.exec(`
     image_url TEXT NOT NULL DEFAULT '',
     title     TEXT NOT NULL DEFAULT ''
   );
+
+  -- جدول اشتراک کاربران
+  CREATE TABLE IF NOT EXISTS subscriptions (
+    id              TEXT PRIMARY KEY,
+    username        TEXT NOT NULL UNIQUE,
+    plan            TEXT NOT NULL DEFAULT 'free',
+    status          TEXT NOT NULL DEFAULT 'free',
+    start_date      TEXT NOT NULL DEFAULT '',
+    expire_date     TEXT NOT NULL DEFAULT '',
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL,
+    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+  );
+
+  -- تاریخچه تمام خریدها و تمدیدها
+  CREATE TABLE IF NOT EXISTS subscription_purchases (
+    id                TEXT PRIMARY KEY,
+    username          TEXT NOT NULL,
+    plan              TEXT NOT NULL,
+    duration_months   INTEGER NOT NULL DEFAULT 0,
+    amount            INTEGER NOT NULL DEFAULT 0,
+    payment_method    TEXT NOT NULL,
+    payment_status    TEXT NOT NULL DEFAULT 'pending',
+    transaction_id    TEXT NOT NULL DEFAULT '',
+    receipt_image     TEXT NOT NULL DEFAULT '',
+    description       TEXT NOT NULL DEFAULT '',
+    created_at        TEXT NOT NULL,
+    approved_at       TEXT NOT NULL DEFAULT '',
+    approved_by       TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+  );
 `);
 
 // ─── رمزگذاری ─────────────────────────────────────────────────────────────────
@@ -145,6 +176,23 @@ insertBanner.run("banner1","https://images.unsplash.com/photo-1618005182384-a83a
 insertBanner.run("banner2","https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=800&q=80","چاپ کارت فیزیکی با برچسب هوشمند NFC");
 insertBanner.run("banner3","https://images.unsplash.com/photo-1600132806370-bf17e65e942f?w=800&q=80","کسب و کار خود را در نقشه گوگل ثبت کنید");
 
+const allUsers = db.prepare("SELECT username FROM users").all() as { username: string }[];
+
+const insertSubscription = db.prepare(`
+  INSERT OR IGNORE INTO subscriptions
+  (id, username, plan, status, start_date, expire_date, created_at, updated_at)
+  VALUES (?, ?, 'free', 'free', '', '', ?, ?)
+`);
+
+allUsers.forEach(u => {
+  const now = new Date().toISOString();
+  insertSubscription.run(
+    crypto.randomUUID(),
+    u.username,
+    now,
+    now
+  );
+});
 // ─── Helper: کاربر از DB ─────────────────────────────────────────────────────
 function getUser(username: string): any | null {
   const row = db.prepare("SELECT * FROM users WHERE LOWER(username)=LOWER(?)").get(username) as any;
@@ -154,7 +202,35 @@ function getUser(username: string): any | null {
     qrRequestStatus: row.qr_request_status, qrRequestTime: row.qr_request_time,
     cardData: JSON.parse(row.card_data || "{}") };
 }
+// ─── Helper: اشتراک کاربر ────────────────────────────────────────────────
+function getUserSubscription(username: string) {
+  const row = db.prepare(
+    `SELECT * FROM subscriptions WHERE LOWER(username)=LOWER(?)`
+  ).get(username) as any;
 
+  if (!row) return null;
+
+  // بررسی انقضای اشتراک
+  if (row.status === 'active' && row.expire_date) {
+    const expire = new Date(row.expire_date);
+    if (expire.getTime() < Date.now()) {
+      db.prepare(`
+        UPDATE subscriptions
+        SET status='expired', updated_at=?
+        WHERE username=?
+      `).run(new Date().toISOString(), username);
+
+      row.status = 'expired';
+    }
+  }
+
+  return row;
+}
+
+function hasActivePro(username: string): boolean {
+  const sub = getUserSubscription(username);
+  return !!sub && sub.status === 'active';
+}
 // ─── WebSocket Manager ────────────────────────────────────────────────────────
 interface WsClient { ws: WebSocket; ticketId: string | null; username: string; role: "user"|"admin"; }
 const wsClients: WsClient[] = [];
@@ -629,6 +705,38 @@ app.post("/api/admin/banners", verifyAdmin, (req, res) => {
   upsert.run("banner2", banner2 || "", "بنر دوم");
   upsert.run("banner3", banner3 || "", "بنر سوم");
   return res.json({ message: "بنرها ویرایش شد.", banners: db.prepare("SELECT * FROM banners").all() });
+});
+
+
+// ──────────────────────────────────────────────────────────────────────────
+// API: وضعیت اشتراک کاربر
+// ──────────────────────────────────────────────────────────────────────────
+app.get('/api/subscription', authRequired, (req: any, res) => {
+  const sub = getUserSubscription(req.username);
+
+  if (!sub) {
+    return res.json({
+      plan: 'free',
+      status: 'free',
+      expireDate: null,
+      remainingDays: 0
+    });
+  }
+
+  let remainingDays = 0;
+
+  if (sub.expire_date) {
+    const diff = new Date(sub.expire_date).getTime() - Date.now();
+    remainingDays = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }
+
+  res.json({
+    plan: sub.plan,
+    status: sub.status,
+    startDate: sub.start_date,
+    expireDate: sub.expire_date,
+    remainingDays
+  });
 });
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
