@@ -202,6 +202,16 @@ function getUser(username: string): any | null {
     qrRequestStatus: row.qr_request_status, qrRequestTime: row.qr_request_time,
     cardData: JSON.parse(row.card_data || "{}") };
 }
+function getUserSubscription(username: string): any | null {
+  return db
+    .prepare(
+      `SELECT *
+       FROM subscriptions
+       WHERE LOWER(username)=LOWER(?)
+       LIMIT 1`
+    )
+    .get(username) as any;
+}
 // ─── Helper: اشتراک کاربر ────────────────────────────────────────────────
 function getUserSubscription(username: string) {
   const row = db.prepare(
