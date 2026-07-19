@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { CardData, User } from "../../types";
 import IPhoneMockup from "../IPhoneMockup";
-
 const COLORS_PRESETS = [
   { name: "آسمان آبی", hex: "#3B82F6" },
   { name: "یاقوتی سرخ", hex: "#EF4444" },
@@ -84,6 +83,7 @@ export default function DesignTab({
   editBasic,
   editSocial,
 }: DesignTabProps) {
+  const [showSubscriptionModal, setShowSubscriptionModal] = React.useState(false);
   return (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start text-right">
           {/* Input fields panel (right side in Arabic view) */}
@@ -187,11 +187,12 @@ export default function DesignTab({
       بزودی
     </span>
 
-    <button
-      className="w-full p-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-400 text-center font-bold text-xs cursor-not-allowed opacity-70"
-    >
-      👑 پلن حرفه‌ای
-    </button>
+      <button
+        onClick={() => setShowSubscriptionModal(true)}
+        className="w-full p-3 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-center font-bold text-xs hover:scale-[1.02] transition-all"
+      >
+        👑 پلن حرفه‌ای
+      </button>
   </div>
 
 </div>
