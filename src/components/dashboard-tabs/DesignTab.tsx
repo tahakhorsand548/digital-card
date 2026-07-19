@@ -188,7 +188,6 @@ export default function DesignTab({
     </span>
 
     <button
-      disabled
       className="w-full p-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-400 text-center font-bold text-xs cursor-not-allowed opacity-70"
     >
       👑 پلن حرفه‌ای
