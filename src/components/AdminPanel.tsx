@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTicketSocket } from "../hooks/useTicketSocket";
+import { CreditCard } from "lucide-react";
 import {
   ShieldCheck,
   LayoutDashboard,
@@ -694,9 +695,15 @@ console.log(subscriptionPurchases);
             </button>
 
             <button
-              onClick={() => setActiveTab("subscriptions")}
+              onClick={() => handleTabChange("subscriptions")}
+              className={`w-full py-2.5 px-4 rounded-xl flex items-center gap-3 text-xs font-bold transition-all ${
+                activeTab === "subscriptions"
+                  ? "bg-indigo-600 text-white"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
+              }`}
             >
-              درخواست اشتراک
+              <CreditCard className="w-4 h-4" />
+              <span>درخواست‌های اشتراک</span>
             </button>
 
 
