@@ -1579,6 +1579,30 @@ const [receiptImage, setReceiptImage] = React.useState<File | null>(null);
                       </div>
 
                       <button
+                      onClick={async () => {
+
+                            const res = await fetch("/api/payment/card-to-card", {
+                              method: "POST",
+                              credentials: "include",
+                              headers: {
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({
+                                plan: selectedPlan,
+                                amount: selectedAmount,
+                              }),
+                            });
+
+                            const data = await res.json();
+
+                            console.log(data);
+
+                            alert("درخواست شما ثبت شد و پس از بررسی فعال خواهد شد.");
+
+                            setShowPaymentMethods(false);
+                            setShowSubscriptionModal(false);
+
+                          }}
                         className="w-full bg-green-600 text-white rounded-xl p-3 mb-3"
                       >
                         ثبت رسید
