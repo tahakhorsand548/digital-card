@@ -89,6 +89,7 @@ const [selectedPlan, setSelectedPlan] = React.useState<
 >(null);
 const [showPaymentMethods, setShowPaymentMethods] = React.useState(false);
 const [paymentMethod, setPaymentMethod] = React.useState<"zarinpal" | "card" | null>(null);
+const [showCardPayment, setShowCardPayment] = React.useState(false);
   return (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start text-right">
           {/* Input fields panel (right side in Arabic view) */}
@@ -1432,6 +1433,11 @@ const [paymentMethod, setPaymentMethod] = React.useState<"zarinpal" | "card" | n
             </div>
           </div>
         )}
+
+    
+                    {/* انتخاب روزش پرداخت کارت به کارت یا درگاه پرداخت*/}
+
+
                     {showPaymentMethods && (
             <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4">
 
@@ -1460,7 +1466,8 @@ const [paymentMethod, setPaymentMethod] = React.useState<"zarinpal" | "card" | n
 
                     if (paymentMethod === "card") {
 
-                      console.log("کارت به کارت");
+                      setShowPaymentMethods(false);
+                      setShowCardPayment(true);
 
                     }
 
@@ -1487,6 +1494,95 @@ const [paymentMethod, setPaymentMethod] = React.useState<"zarinpal" | "card" | n
 
             </div>
           )}
+             
+
+
+
+                {/* تکمیل پرداخت با کارت بانکی */}
+
+                                {showCardPayment && (
+                  <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4">
+
+                    <div className="w-full max-w-lg bg-white rounded-2xl p-6">
+
+                      <h2 className="text-2xl font-bold text-center mb-2">
+                        پرداخت کارت به کارت
+                      </h2>
+
+                      <p className="text-gray-500 text-center mb-6">
+                        مبلغ را به کارت زیر واریز کرده و سپس رسید را ارسال کنید.
+                      </p>
+
+                      {/* مبلغ */}
+                      <div className="rounded-xl border p-4 mb-4">
+
+                        <div className="text-sm text-gray-500">
+                          مبلغ قابل پرداخت
+                        </div>
+
+                        <div className="text-2xl font-bold text-blue-600 mt-2">
+
+                          {selectedPlan === "3months" && "890,000 تومان"}
+
+                          {selectedPlan === "6months" && "1,590,000 تومان"}
+
+                          {selectedPlan === "1year" && "2,790,000 تومان"}
+
+                        </div>
+
+                      </div>
+
+                      {/* شماره کارت */}
+
+                      <div className="rounded-xl border p-4 mb-3">
+
+                        <div className="text-sm text-gray-500 mb-2">
+                          شماره کارت
+                        </div>
+
+                        <div className="font-bold text-lg">
+                          6037-9918-1234-5678
+                        </div>
+
+                      </div>
+
+                      {/* صاحب حساب */}
+
+                      <div className="rounded-xl border p-4 mb-5">
+
+                        <div className="text-sm text-gray-500">
+                          صاحب حساب
+                        </div>
+
+                        <div className="font-bold">
+                          طاها خورسند
+                        </div>
+
+                      </div>
+
+                      <button
+                        className="w-full bg-blue-600 text-white rounded-xl p-3 mb-3"
+                      >
+                        آپلود رسید پرداخت
+                      </button>
+
+                      <button
+                        className="w-full bg-green-600 text-white rounded-xl p-3 mb-3"
+                      >
+                        ثبت رسید
+                      </button>
+
+                      <button
+                        onClick={() => setShowCardPayment(false)}
+                        className="w-full bg-gray-200 rounded-xl p-3"
+                      >
+                        بازگشت
+                      </button>
+
+                    </div>
+
+                  </div>
+                )}
 
 
         </div>
