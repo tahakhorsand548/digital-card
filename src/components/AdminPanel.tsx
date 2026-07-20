@@ -115,6 +115,11 @@ const filteredUsers = usersList.filter((u) => {
   const [adBanner2, setAdBanner2] = useState("");
   const [adBanner3, setAdBanner3] = useState("");
 
+
+  // تایید خرید کاربران
+  const [subscriptionPurchases, setSubscriptionPurchases] = useState<any[]>([]);
+
+
   // ─── WebSocket: real-time تیکت‌ها (بعد از همه useState ها) ─────────────────
   useTicketSocket({
     role: "admin",
@@ -569,6 +574,14 @@ const filteredUsers = usersList.filter((u) => {
       console.error(e);
     }
   };
+
+      const purchasesRes = await fetch("/api/admin/subscription-purchases", {
+      credentials: "include",
+    });
+
+    const purchasesData = await purchasesRes.json();
+
+    setSubscriptionPurchases(purchasesData);
 
   if (loading) {
     return (
