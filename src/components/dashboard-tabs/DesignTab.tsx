@@ -90,7 +90,17 @@ const [selectedPlan, setSelectedPlan] = React.useState<
 const [showPaymentMethods, setShowPaymentMethods] = React.useState(false);
 const [paymentMethod, setPaymentMethod] = React.useState<"zarinpal" | "card" | null>(null);
 const [showCardPayment, setShowCardPayment] = React.useState(false);
-const [receiptImage, setReceiptImage] = React.useState<File | null>(null);
+  const [receiptImage, setReceiptImage] = React.useState<File | null>(null);
+
+  // 👇 این قسمت را اضافه کن
+  const selectedAmount =
+    selectedPlan === "3months"
+      ? 890000
+      : selectedPlan === "6months"
+      ? 1590000
+      : selectedPlan === "12months"
+      ? 2790000
+      : 0;
   return (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start text-right">
           {/* Input fields panel (right side in Arabic view) */}
