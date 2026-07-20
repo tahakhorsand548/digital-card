@@ -87,7 +87,8 @@ export default function DesignTab({
 const [selectedPlan, setSelectedPlan] = React.useState<
   "free" | "3months" | "6months" | "12months" | null
 >(null);
-
+const [showPaymentMethods, setShowPaymentMethods] = React.useState(false);
+const [paymentMethod, setPaymentMethod] = React.useState<"zarinpal" | "card" | null>(null);
   return (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start text-right">
           {/* Input fields panel (right side in Arabic view) */}
@@ -1420,37 +1421,51 @@ const [selectedPlan, setSelectedPlan] = React.useState<
               یک ساله
               </button>
 
-                        <button
-            onClick={async () => {
-
-  if (!selectedPlan) return;
-
-  const res = await fetch("/api/payment/create",{
-    method:"POST",
-    credentials:"include",
-    headers:{
-      "Content-Type":"application/json"
-    },
-    body:JSON.stringify({
-      plan:selectedPlan
-    })
-  });
-
-  const data = await res.json();
-
-  console.log(data);
-
-}}
-            className="w-full mt-5 rounded-xl bg-blue-600 text-white p-3 font-bold disabled:opacity-50"
-          >
-            ادامه و پرداخت
-          </button>
+              <button
+                onClick={() => setShowPaymentMethods(true)}
+                className="w-full mt-5 rounded-xl bg-blue-600 text-white p-3 font-bold disabled:opacity-50"
+              >
+                ادامه و پرداخت
+              </button>
 
               </div>
             </div>
           </div>
         )}
+                    {showPaymentMethods && (
+            <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4">
 
+              <div className="w-full max-w-md bg-white rounded-2xl p-6">
+
+                <h2 className="text-xl font-bold text-center mb-5">
+                  انتخاب روش پرداخت
+                </h2>
+
+                <button
+                  onClick={() => setPaymentMethod("zarinpal")}
+                  className="w-full border rounded-xl p-4 mb-3"
+                >
+                  پرداخت آنلاین (زرین پال)
+                </button>
+
+                <button
+                  onClick={() => setPaymentMethod("card")}
+                  className="w-full border rounded-xl p-4 mb-5"
+                >
+                  کارت به کارت
+                </button>
+
+                <button
+                  onClick={() => setShowPaymentMethods(false)}
+                  className="w-full bg-gray-200 rounded-xl p-3"
+                >
+                  انصراف
+                </button>
+
+              </div>
+
+            </div>
+          )}
 
 
         </div>
