@@ -904,16 +904,6 @@ app.post("/api/payment/create", verifyToken, async (req: any, res) => {
         url: `https://payment.zarinpal.com/pg/StartPay/${authority}`,
       });
 
-    const authority =
-      result.data.data.authority;
-
-    return res.json({
-
-      url:
-        `https://payment.zarinpal.com/pg/StartPay/${authority}`
-
-    });
-
   } catch (err) {
 
     console.log(err);
