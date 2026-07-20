@@ -936,11 +936,41 @@ app.post("/api/payment/create", verifyToken, async (req: any, res) => {
 
 // });
 
+// app.post("/api/payment/card-to-card", verifyToken, (req: any, res) => {
+
+//   return res.json({
+//     success: true
+//   });
+
+// });
+
+
 app.post("/api/payment/card-to-card", verifyToken, (req: any, res) => {
 
-  return res.json({
-    success: true
-  });
+  try {
+
+    const { plan, amount } = req.body;
+
+    console.log("===== Card To Card =====");
+    console.log("User:", req.user);
+    console.log("Plan:", plan);
+    console.log("Amount:", amount);
+
+    return res.json({
+      success: true,
+      message: "درخواست ثبت شد."
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+
+  }
 
 });
 
