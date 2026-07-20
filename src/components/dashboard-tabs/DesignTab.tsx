@@ -1607,6 +1607,11 @@ const [showCardPayment, setShowCardPayment] = React.useState(false);
 
                             console.log(data);
 
+                            if (!data.success) {
+                              alert(data.error || "خطا");
+                              return;
+                            }
+
                             alert("درخواست شما ثبت شد و پس از بررسی فعال خواهد شد.");
 
                             setShowPaymentMethods(false);

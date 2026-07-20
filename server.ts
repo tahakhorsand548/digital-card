@@ -1012,14 +1012,13 @@ app.post("/api/payment/card-to-card", verifyToken, (req: any, res) => {
     });
 
   } catch (err) {
+  console.error(err);
 
-    console.error(err);
-
-    return res.status(500).json({
-      success: false
-    });
-
-  }
+  return res.status(500).json({
+    success: false,
+    error: String(err)
+  });
+}
 
 });
 
