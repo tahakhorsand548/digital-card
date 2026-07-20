@@ -717,6 +717,22 @@ app.get("/api/admin/users", verifyAdmin, (req, res) => {
     cardData: JSON.parse(r.card_data),
   })));
 });
+// ای پی ای کارت به کارت به پنل ادمین
+app.get("/api/admin/subscription-purchases", verifyAdmin, (req, res) => {
+
+  const rows = db.prepare(`
+    SELECT 
+      sp.*,
+      u.full_name
+    FROM subscription_purchases sp
+    JOIN users u 
+    ON sp.username = u.username
+    ORDER BY sp.created_at DESC
+  `).all();
+
+  return res.json(rows);
+
+});
 
 app.post("/api/admin/users/:username/edit", verifyAdmin, (req, res) => {
   const { fullName, email, phone, password } = req.body;
