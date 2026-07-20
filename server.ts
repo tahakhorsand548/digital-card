@@ -951,10 +951,60 @@ app.post("/api/payment/card-to-card", verifyToken, (req: any, res) => {
 
     const { plan, amount } = req.body;
 
-    console.log("===== Card To Card =====");
-    console.log("User:", req.user);
-    console.log("Plan:", plan);
-    console.log("Amount:", amount);
+    db.prepare(`
+      INSERT INTO subscription_purchases (
+        id,
+        username,
+        plan,
+        duration_months,
+        amount,
+        payment_method,
+        payment_status,
+        transaction_id,
+        receipt_image,
+        description,
+        created_at,
+        approved_at,
+        approved_by
+      )
+      VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      )
+    `).run(
+
+      crypto.randomUUID(),
+
+      req.user.username,
+
+      plan,
+
+      plan === "3months"
+        ? 3
+        : plan === "6months"
+        ? 6
+        : plan === "12months"
+        ? 12
+        : 0,
+
+      amount,
+
+      "card",
+
+      "pending",
+
+      "",
+
+      "",
+
+      "پرداخت کارت به کارت",
+
+      new Date().toISOString(),
+
+      "",
+
+      ""
+
+    );
 
     return res.json({
       success: true,
@@ -966,8 +1016,7 @@ app.post("/api/payment/card-to-card", verifyToken, (req: any, res) => {
     console.error(err);
 
     return res.status(500).json({
-      success: false,
-      message: "Server Error"
+      success: false
     });
 
   }
