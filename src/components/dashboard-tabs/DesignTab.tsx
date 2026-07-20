@@ -1454,6 +1454,27 @@ const [paymentMethod, setPaymentMethod] = React.useState<"zarinpal" | "card" | n
                 >
                   کارت به کارت
                 </button>
+                                <button
+                  disabled={!paymentMethod}
+                  onClick={() => {
+
+                    if (paymentMethod === "card") {
+
+                      console.log("کارت به کارت");
+
+                    }
+
+                    if (paymentMethod === "zarinpal") {
+
+                      console.log("زرین پال");
+
+                    }
+
+                  }}
+                  className="w-full bg-blue-600 text-white rounded-xl p-3 mb-3 disabled:opacity-50"
+                >
+                  ادامه
+                </button>
 
                 <button
                   onClick={() => setShowPaymentMethods(false)}
