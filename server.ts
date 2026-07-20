@@ -735,6 +735,20 @@ app.get("/api/admin/subscription-purchases", verifyAdmin, (req, res) => {
 });
 
 
+
+// متن تست برای دیتا بیس سیستم کارت به کارت دستی
+
+app.get("/api/debug/subscriptions", (req, res) => {
+
+  const rows = db.prepare(`
+    SELECT * FROM subscriptions
+  `).all();
+
+  res.json(rows);
+
+});
+
+
 app.post("/api/admin/subscription-purchases/:id/approve", verifyAdmin, (req, res) => {
 
   const purchaseId = req.params.id;
