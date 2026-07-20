@@ -1432,6 +1432,117 @@ console.log(subscriptionPurchases);
           </div>
         )}
 
+
+
+
+
+          {activeTab === "subscriptions" && (
+
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6">
+
+            <h2 className="text-xl font-bold text-white mb-6">
+              درخواست‌های اشتراک
+            </h2>
+
+            <div className="overflow-x-auto">
+
+              <table className="w-full text-sm">
+
+                <thead>
+
+                  <tr className="border-b border-slate-700 text-slate-400">
+
+                    <th className="py-3">کاربر</th>
+
+                    <th>نام</th>
+
+                    <th>پلن</th>
+
+                    <th>مبلغ</th>
+
+                    <th>وضعیت</th>
+
+                    <th>تاریخ</th>
+
+                    <th>عملیات</th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {subscriptionPurchases.map((purchase) => (
+
+                    <tr
+                      key={purchase.id}
+                      className="border-b border-slate-800 text-center hover:bg-slate-800/40 transition"
+                    >
+
+                      <td className="py-4">
+                        {purchase.username}
+                      </td>
+
+                      <td>
+                        {purchase.full_name}
+                      </td>
+
+                      <td>
+                        {purchase.plan}
+                      </td>
+
+                      <td>
+                        {purchase.amount.toLocaleString()} تومان
+                      </td>
+
+                      <td>
+
+                        <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-xs">
+
+                          در انتظار
+
+                        </span>
+
+                      </td>
+
+                      <td>
+
+                        {new Date(purchase.created_at).toLocaleDateString("fa-IR")}
+
+                      </td>
+
+                      <td>
+
+                        <button
+                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs ml-2"
+                        >
+                          تایید
+                        </button>
+
+                        <button
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-xs"
+                        >
+                          رد
+                        </button>
+
+                      </td>
+
+                    </tr>
+
+                  ))}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        )}
+
+
+
         {/* TAB 5: PUBLIC ANNOUNCEMENTS (اعلانات همگانی) */}
         {activeTab === "announcements" && (
           <div className="space-y-6">
