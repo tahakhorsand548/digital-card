@@ -694,6 +694,14 @@ console.log(subscriptionPurchases);
             </button>
 
             <button
+              onClick={() => setActiveTab("subscriptions")}
+            >
+              درخواست اشتراک
+            </button>
+
+
+
+            <button
               onClick={() => handleTabChange("announcements")}
               className={`w-full py-2.5 px-4 rounded-xl flex items-center gap-3 text-xs font-bold transition-all ${
                 activeTab === "announcements"
