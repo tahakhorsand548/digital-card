@@ -919,19 +919,27 @@ app.post("/api/payment/create", verifyToken, async (req: any, res) => {
 
 
 
+// app.post("/api/payment/card-to-card", verifyToken, (req: any, res) => {
+
+//   const { plan, amount } = req.body;
+
+//   console.log("درخواست کارت به کارت:", {
+//     userId: req.user.id,
+//     plan,
+//     amount
+//   });
+
+//   res.json({
+//     success: true,
+//     message: "درخواست ثبت شد."
+//   });
+
+// });
+
 app.post("/api/payment/card-to-card", verifyToken, (req: any, res) => {
 
-  const { plan, amount } = req.body;
-
-  console.log("درخواست کارت به کارت:", {
-    userId: req.user.id,
-    plan,
-    amount
-  });
-
-  res.json({
-    success: true,
-    message: "درخواست ثبت شد."
+  return res.json({
+    success: true
   });
 
 });
