@@ -117,7 +117,8 @@ const filteredUsers = usersList.filter((u) => {
 
 
   // تایید خرید کاربران
-  const [subscriptionPurchases, setSubscriptionPurchases] = useState<any[]>([]);
+
+  const [subscriptionPurchases, setSubscriptionPurchases] = React.useState<any[]>([]);
 
 
   // ─── WebSocket: real-time تیکت‌ها (بعد از همه useState ها) ─────────────────
@@ -275,11 +276,13 @@ const filteredUsers = usersList.filter((u) => {
         }
       }
       // 7. Subscription Purchases
-      const purchasesRes = await apiFetch("/api/admin/subscription-purchases");
+      const purchasesRes = await fetch("/api/admin/subscription-purchases", {
+        credentials: "include",
+      });
 
       if (purchasesRes.ok) {
-        const purchasesData = await purchasesRes.json();
-        setSubscriptionPurchases(purchasesData);
+        const purchases = await purchasesRes.json();
+        setSubscriptionPurchases(purchases);
       }
     } catch (e) {
       console.error(e);
@@ -621,7 +624,7 @@ const filteredUsers = usersList.filter((u) => {
       </div>
     );
   }
-
+console.log(subscriptionPurchases);
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row text-right">
       {/* Admin Sidebar options */}
