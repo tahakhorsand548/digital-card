@@ -274,6 +274,13 @@ const filteredUsers = usersList.filter((u) => {
           setAdLink3(ban[2].link || "");
         }
       }
+      // 7. Subscription Purchases
+      const purchasesRes = await apiFetch("/api/admin/subscription-purchases");
+
+      if (purchasesRes.ok) {
+        const purchasesData = await purchasesRes.json();
+        setSubscriptionPurchases(purchasesData);
+      }
     } catch (e) {
       console.error(e);
       setErrorMsg("خطای فنی در برقراری ارتباط با پلتفرم ادمین.");
@@ -574,14 +581,6 @@ const filteredUsers = usersList.filter((u) => {
       console.error(e);
     }
   };
-
-      const purchasesRes = await fetch("/api/admin/subscription-purchases", {
-      credentials: "include",
-    });
-
-    const purchasesData = await purchasesRes.json();
-
-    setSubscriptionPurchases(purchasesData);
 
   if (loading) {
     return (
