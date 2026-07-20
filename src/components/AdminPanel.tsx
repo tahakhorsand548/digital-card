@@ -625,7 +625,25 @@ const filteredUsers = usersList.filter((u) => {
       </div>
     );
   }
-console.log(subscriptionPurchases);
+
+
+
+
+        const approvePurchase = async (id: string) => {
+
+        const res = await fetch(`/api/admin/subscription-purchases/${id}/approve`, {
+          method: "POST",
+          credentials: "include",
+        });
+
+        const data = await res.json();
+
+        console.log(data);
+
+      };
+
+
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row text-right">
       {/* Admin Sidebar options */}
@@ -1514,7 +1532,8 @@ console.log(subscriptionPurchases);
                       <td>
 
                         <button
-                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs ml-2"
+                          onClick={() => approvePurchase(item.id)}
+                          className="rounded-lg bg-green-600 px-3 py-2 text-white text-xs hover:bg-green-700"
                         >
                           تایید
                         </button>
