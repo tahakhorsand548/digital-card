@@ -90,6 +90,7 @@ const [selectedPlan, setSelectedPlan] = React.useState<
 const [showPaymentMethods, setShowPaymentMethods] = React.useState(false);
 const [paymentMethod, setPaymentMethod] = React.useState<"zarinpal" | "card" | null>(null);
 const [showCardPayment, setShowCardPayment] = React.useState(false);
+const [receiptImage, setReceiptImage] = React.useState<File | null>(null);
   return (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start text-right">
           {/* Input fields panel (right side in Arabic view) */}
@@ -1560,11 +1561,22 @@ const [showCardPayment, setShowCardPayment] = React.useState(false);
 
                       </div>
 
-                      <button
-                        className="w-full bg-blue-600 text-white rounded-xl p-3 mb-3"
-                      >
-                        آپلود رسید پرداخت
-                      </button>
+                      <div className="mt-5">
+
+                        <label className="block text-sm font-medium mb-2">
+                          رسید پرداخت
+                        </label>
+
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) =>
+                            setReceiptImage(e.target.files?.[0] || null)
+                          }
+                          className="w-full rounded-lg border p-2"
+                        />
+
+                      </div>
 
                       <button
                         className="w-full bg-green-600 text-white rounded-xl p-3 mb-3"
