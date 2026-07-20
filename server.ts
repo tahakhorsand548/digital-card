@@ -365,14 +365,44 @@ app.use((req, res, next) => {
 });
 
 // تأیید توکن
+// function verifyToken(req: any, res: any, next: any) {
+//   const token = req.cookies?.authToken || req.headers?.authorization?.replace("Bearer ", "");
+//   if (!token) return res.status(410).json({ message: "توکن معتبر یافت نشد." });
+//   try {
+//     const decoded = jwt.verify(token, JWT_SECRET) as any;
+//     req.username = decoded.username;
+//     next();
+//   } catch { return res.status(401).json({ message: "توکن منقضی یا نامعتبر است." }); }
+// }
+
 function verifyToken(req: any, res: any, next: any) {
-  const token = req.cookies?.authToken || req.headers?.authorization?.replace("Bearer ", "");
-  if (!token) return res.status(410).json({ message: "توکن معتبر یافت نشد." });
+
+  const token =
+    req.cookies?.authToken ||
+    req.headers?.authorization?.replace("Bearer ", "");
+
+  if (!token) {
+    return res.status(401).json({
+      message: "توکن یافت نشد"
+    });
+  }
+
   try {
+
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    req.username = decoded.username;
+
+    req.user = decoded; // اضافه شود
+    req.username = decoded.username; // برای سازگاری با کدهای قبلی بماند
+
     next();
-  } catch { return res.status(401).json({ message: "توکن منقضی یا نامعتبر است." }); }
+
+  } catch {
+
+    return res.status(401).json({
+      message: "توکن نامعتبر است"
+    });
+
+  }
 }
 
 function verifyAdmin(req: any, res: any, next: any) {
