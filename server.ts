@@ -1,5 +1,4 @@
 
-import axios from "axios";
 import "dotenv/config";
 import express from "express";
 import path from "path";
@@ -881,21 +880,29 @@ app.post("/api/payment/create", verifyToken, async (req: any, res) => {
 
   try {
 
-    const result = await axios.post(
-      "https://payment.zarinpal.com/pg/v4/payment/request.json",
-      {
+      const response = await fetch(
+        "https://payment.zarinpal.com/pg/v4/payment/request.json",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            merchant_id: process.env.ZARINPAL_MERCHANT_ID,
+            amount,
+            description: `اشتراک ${plan}`,
+            callback_url: `${process.env.BASE_URL}/api/payment/verify?plan=${plan}`,
+          }),
+        }
+      );
 
-        merchant_id: process.env.ZARINPAL_MERCHANT_ID,
+      const result = await response.json();
 
-        amount,
+      const authority = result.data.authority;
 
-        description: `اشتراک ${plan}`,
-
-        callback_url:
-          `${process.env.BASE_URL}/api/payment/verify?plan=${plan}`
-
-      }
-    );
+      return res.json({
+        url: `https://payment.zarinpal.com/pg/StartPay/${authority}`,
+      });
 
     const authority =
       result.data.data.authority;
