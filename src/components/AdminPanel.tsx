@@ -1532,7 +1532,7 @@ const filteredUsers = usersList.filter((u) => {
                       <td>
 
                         <button
-                          onClick={() => approvePurchase(item.id)}
+                          onClick={() => approvePurchase(purchase.id)}
                           className="rounded-lg bg-green-600 px-3 py-2 text-white text-xs hover:bg-green-700"
                         >
                           تایید
