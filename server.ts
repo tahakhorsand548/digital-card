@@ -734,6 +734,100 @@ app.get("/api/admin/subscription-purchases", verifyAdmin, (req, res) => {
 
 });
 
+
+app.post("/api/admin/subscription-purchases/:id/approve", verifyAdmin, (req, res) => {
+
+  const purchaseId = req.params.id;
+
+  const purchase = db.prepare(`
+    SELECT * FROM subscription_purchases
+    WHERE id = ?
+  `).get(purchaseId) as any;
+
+  if (!purchase) {
+    return res.status(404).json({
+      success: false
+    });
+  }
+
+  if (purchase.payment_status === "approved") {
+    return res.json({
+      success: true
+    });
+  }
+
+  const now = new Date();
+
+  const expire = new Date();
+
+  expire.setMonth(
+    expire.getMonth() + purchase.duration_months
+  );
+
+  db.prepare(`
+    UPDATE subscription_purchases
+    SET
+      payment_status='approved',
+      approved_at=?,
+      approved_by='admin'
+    WHERE id=?
+  `).run(
+    now.toISOString(),
+    purchaseId
+  );
+
+  db.prepare(`
+    INSERT INTO subscriptions(
+      id,
+      username,
+      plan,
+      status,
+      start_date,
+      expire_date,
+      created_at,
+      updated_at
+    )
+    VALUES(
+      ?,?,?,?,?,?,?,?
+    )
+    ON CONFLICT(username)
+    DO UPDATE SET
+
+      plan=excluded.plan,
+
+      status='active',
+
+      start_date=excluded.start_date,
+
+      expire_date=excluded.expire_date,
+
+      updated_at=excluded.updated_at
+  `).run(
+
+    crypto.randomUUID(),
+
+    purchase.username,
+
+    purchase.plan,
+
+    "active",
+
+    now.toISOString(),
+
+    expire.toISOString(),
+
+    now.toISOString(),
+
+    now.toISOString()
+
+  );
+
+  res.json({
+    success:true
+  });
+
+});
+
 app.post("/api/admin/users/:username/edit", verifyAdmin, (req, res) => {
   const { fullName, email, phone, password } = req.body;
   const result = db.prepare("UPDATE users SET full_name=?,email=?,phone=? WHERE LOWER(username)=LOWER(?)")
