@@ -30,6 +30,7 @@ import {
 import { User, Ticket, GlobalAnnouncement } from "../types";
 import { apiFetch, setAuthToken } from "../utils/api";
 import QRCode from "qrcode";
+import { Trash2 } from "lucide-react";
 
 // const fetch = apiFetch;
 
@@ -643,6 +644,31 @@ const filteredUsers = usersList.filter((u) => {
         if (data.success) {
           await fetchAdminData();
         }
+
+      };
+
+
+
+      const deletePurchase = async (id: string) => {
+
+        if (!confirm("این درخواست حذف شود؟")) return;
+
+        const res = await fetch(
+          `/api/admin/subscription-purchases/${id}/delete`,
+          {
+            method: "POST",
+            credentials: "include",
+          }
+        );
+
+        const data = await res.json();
+
+        if (!data.success) {
+          alert("خطا");
+          return;
+        }
+
+        fetchAdminData();
 
       };
 
@@ -1574,11 +1600,12 @@ const filteredUsers = usersList.filter((u) => {
                       )}
 
                         <button
-                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-xs"
-                        >
-                          رد
-                        </button>
-
+                        onClick={() => deletePurchase(purchase.id)}
+                        className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white"
+                        title="حذف درخواست"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                       </td>
 
                     </tr>
