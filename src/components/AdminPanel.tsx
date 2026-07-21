@@ -1515,11 +1515,23 @@ const filteredUsers = usersList.filter((u) => {
 
                       <td>
 
-                        <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-xs">
+                        {purchase.payment_status === "pending" && (
+                      <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-xs">
+                        در انتظار
+                      </span>
+                    )}
 
-                          در انتظار
+                    {purchase.payment_status === "approved" && (
+                      <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs">
+                        تایید شده
+                      </span>
+                    )}
 
-                        </span>
+                    {purchase.payment_status === "rejected" && (
+                      <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-xs">
+                        رد شده
+                      </span>
+)}
 
                       </td>
 
@@ -1531,12 +1543,14 @@ const filteredUsers = usersList.filter((u) => {
 
                       <td>
 
+                        {purchase.payment_status === "pending" && (
                         <button
                           onClick={() => approvePurchase(purchase.id)}
                           className="rounded-lg bg-green-600 px-3 py-2 text-white text-xs hover:bg-green-700"
                         >
                           تایید
                         </button>
+                      )}
 
                         <button
                           className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-xs"
