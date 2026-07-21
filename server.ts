@@ -16,7 +16,7 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 
-const receiptsDir = path.join(DATA_DIR, "uploads", "receipts");
+const receiptsDir = path.join(UPLOADS_DIR, "receipts");
 
 if (!fs.existsSync(receiptsDir)) {
   fs.mkdirSync(receiptsDir, { recursive: true });
@@ -66,6 +66,31 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const DATA_DIR    = path.join(process.cwd(), "data");
 const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 [DATA_DIR, UPLOADS_DIR].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
+
+
+const receiptsDir = path.join(UPLOADS_DIR, "receipts");
+
+if (!fs.existsSync(receiptsDir)) {
+  fs.mkdirSync(receiptsDir, { recursive: true });
+}
+
+const receiptUpload = multer({
+  storage: multer.diskStorage({
+    destination(req, file, cb) {
+      cb(null, receiptsDir);
+    },
+
+    filename(req, file, cb) {
+      cb(
+        null,
+        Date.now() +
+          "-" +
+          Math.random().toString(36).slice(2) +
+          path.extname(file.originalname)
+      );
+    },
+  }),
+});
 
 // ─── SQLite ───────────────────────────────────────────────────────────────────
 const db = new Database(path.join(DATA_DIR, "app.db"));
