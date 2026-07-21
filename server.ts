@@ -396,10 +396,6 @@ app.use((req, res, next) => {
 
 
 
-
-app.use("/uploads", express.static(UPLOADS_DIR));
-
-
 // تأیید توکن
 // function verifyToken(req: any, res: any, next: any) {
 //   const token = req.cookies?.authToken || req.headers?.authorization?.replace("Bearer ", "");
@@ -1138,16 +1134,13 @@ app.post("/api/payment/create", verifyToken, async (req: any, res) => {
 app.post(
   "/api/payment/card-to-card",
   verifyToken,
-  receiptUpload.single("receipt"),
   (req: any, res) => {
 
   try {
 
     const { plan, amount } = req.body;
 
-    const receiptImage = req.file
-  ? `/uploads/receipts/${req.file.filename}`
-  : "";
+    const receiptImage = "";
 
 
   console.log(req.file);
@@ -1194,9 +1187,9 @@ console.log(receiptImage);
 
       "pending",
 
-      "",
+      "",          // transaction_id
 
-      receiptImage,
+      receiptImage, // receipt_image
 
       "پرداخت کارت به کارت",
 
