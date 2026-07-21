@@ -1600,6 +1600,11 @@ const [showCardPayment, setShowCardPayment] = React.useState(false);
                               formData.append("receipt", receiptImage);
                             }
 
+
+                            console.log("receiptImage:", receiptImage);
+                            console.log("selectedPlan:", selectedPlan);
+                            console.log("selectedAmount:", selectedAmount);
+
                             const res = await fetch("/api/payment/card-to-card", {
                               method: "POST",
                               credentials: "include",

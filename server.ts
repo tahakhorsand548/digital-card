@@ -13,9 +13,6 @@ import Database from "better-sqlite3";
 import multer from "multer";
 
 
-import fs from "fs";
-import path from "path";
-
 
 const app = express();
 app.set("trust proxy", 1);
@@ -1134,13 +1131,20 @@ app.post("/api/payment/create", verifyToken, async (req: any, res) => {
 app.post(
   "/api/payment/card-to-card",
   verifyToken,
-  (req: any, res) => {
+  receiptUpload.single("receipt"),
+  (req: any, res: any) => {
+
+      console.log("BODY:", req.body);
+  console.log("FILE:", req.file);
+  console.log("USER:", req.user);
 
   try {
 
     const { plan, amount } = req.body;
 
-    const receiptImage = "";
+    const receiptImage = req.file
+  ? `/uploads/receipts/${req.file.filename}`
+  : "";
 
 
   console.log(req.file);
