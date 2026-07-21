@@ -1238,7 +1238,7 @@ app.post(
 
     if (!purchase) {
       return res.status(404).json({
-        success:false
+        success: false
       });
     }
 
@@ -1261,9 +1261,12 @@ app.post(
     `).run(req.params.id);
 
     res.json({
-      success:true
+      success: true
     });
 
+  }   // ← این براکت جا افتاده بود
+
+);    // ← و این هم جا افتاده بود
 
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
