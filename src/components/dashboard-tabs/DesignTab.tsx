@@ -1591,16 +1591,19 @@ const [showCardPayment, setShowCardPayment] = React.useState(false);
                       <button
                       onClick={async () => {
 
+                            const formData = new FormData();
+
+                            formData.append("plan", selectedPlan!);
+                            formData.append("amount", String(selectedAmount));
+
+                            if (receiptImage) {
+                              formData.append("receipt", receiptImage);
+                            }
+
                             const res = await fetch("/api/payment/card-to-card", {
                               method: "POST",
                               credentials: "include",
-                              headers: {
-                                "Content-Type": "application/json",
-                              },
-                              body: JSON.stringify({
-                                plan: selectedPlan,
-                                amount: selectedAmount,
-                              }),
+                              body: formData,
                             });
 
                             const data = await res.json();
