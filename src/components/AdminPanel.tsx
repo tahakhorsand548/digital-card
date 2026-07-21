@@ -1563,6 +1563,7 @@ const filteredUsers = usersList.filter((u) => {
                         </button>
 
                       </td>
+                      <td>{purchase.receipt_image}</td>
 
                     </tr>
 
