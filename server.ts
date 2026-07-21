@@ -394,6 +394,12 @@ app.use((req, res, next) => {
   next();
 });
 
+
+
+
+app.use("/uploads", express.static(UPLOADS_DIR));
+
+
 // تأیید توکن
 // function verifyToken(req: any, res: any, next: any) {
 //   const token = req.cookies?.authToken || req.headers?.authorization?.replace("Bearer ", "");
@@ -1142,6 +1148,10 @@ app.post(
     const receiptImage = req.file
   ? `/uploads/receipts/${req.file.filename}`
   : "";
+
+
+  console.log(req.file);
+console.log(receiptImage);
 
     db.prepare(`
       INSERT INTO subscription_purchases (
