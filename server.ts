@@ -12,6 +12,36 @@ import { createServer as createHttpServer } from "http";
 import Database from "better-sqlite3";
 import multer from "multer";
 
+
+import fs from "fs";
+import path from "path";
+
+const receiptsDir = path.join(DATA_DIR, "uploads", "receipts");
+
+if (!fs.existsSync(receiptsDir)) {
+  fs.mkdirSync(receiptsDir, { recursive: true });
+}
+
+const receiptUpload = multer({
+  storage: multer.diskStorage({
+
+    destination(req, file, cb) {
+      cb(null, receiptsDir);
+    },
+
+    filename(req, file, cb) {
+      cb(
+        null,
+        Date.now() +
+          "-" +
+          Math.random().toString(36).slice(2) +
+          path.extname(file.originalname)
+      );
+    }
+
+  })
+});
+
 const app = express();
 app.set("trust proxy", 1);
 
@@ -1099,11 +1129,19 @@ app.post("/api/payment/create", verifyToken, async (req: any, res) => {
 // });
 
 
-app.post("/api/payment/card-to-card", verifyToken, (req: any, res) => {
+app.post(
+  "/api/payment/card-to-card",
+  verifyToken,
+  receiptUpload.single("receipt"),
+  (req: any, res) => {
 
   try {
 
     const { plan, amount } = req.body;
+
+    const receiptImage = req.file
+  ? `/uploads/receipts/${req.file.filename}`
+  : "";
 
     db.prepare(`
       INSERT INTO subscription_purchases (
@@ -1148,7 +1186,7 @@ app.post("/api/payment/card-to-card", verifyToken, (req: any, res) => {
 
       "",
 
-      "",
+      receiptImage,
 
       "پرداخت کارت به کارت",
 
