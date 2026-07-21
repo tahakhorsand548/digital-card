@@ -1222,6 +1222,50 @@ console.log(receiptImage);
 });
 
 
+
+
+
+app.post(
+  "/api/admin/subscription-purchases/:id/delete",
+  verifyAdmin,
+  (req, res) => {
+
+    const purchase = db.prepare(`
+      SELECT *
+      FROM subscription_purchases
+      WHERE id=?
+    `).get(req.params.id) as any;
+
+    if (!purchase) {
+      return res.status(404).json({
+        success:false
+      });
+    }
+
+    if (purchase.receipt_image) {
+
+      const filePath = path.join(
+        UPLOADS_DIR,
+        purchase.receipt_image.replace("/uploads/", "")
+      );
+
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+    }
+
+    db.prepare(`
+      DELETE FROM subscription_purchases
+      WHERE id=?
+    `).run(req.params.id);
+
+    res.json({
+      success:true
+    });
+
+
+
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 async function bootstrap() {
   if (process.env.NODE_ENV !== "production") {
