@@ -629,7 +629,7 @@ const filteredUsers = usersList.filter((u) => {
 
 
 
-        const approvePurchase = async (id: string) => {
+      const approvePurchase = async (id: string) => {
 
         const res = await fetch(`/api/admin/subscription-purchases/${id}/approve`, {
           method: "POST",
@@ -639,6 +639,10 @@ const filteredUsers = usersList.filter((u) => {
         const data = await res.json();
 
         console.log(data);
+
+        if (data.success) {
+          await fetchAdminData();
+        }
 
       };
 
