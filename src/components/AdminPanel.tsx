@@ -1486,6 +1486,8 @@ const filteredUsers = usersList.filter((u) => {
 
                     <th>تاریخ</th>
 
+                    <th>رسید</th>
+
                     <th>عملیات</th>
 
                   </tr>
@@ -1546,6 +1548,21 @@ const filteredUsers = usersList.filter((u) => {
                       </td>
 
                       <td>
+                      {purchase.receipt_image ? (
+                        <a
+                          href={purchase.receipt_image}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs"
+                        >
+                          مشاهده رسید
+                        </a>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+
+                      <td>
 
                         {purchase.payment_status === "pending" && (
                         <button
@@ -1563,7 +1580,6 @@ const filteredUsers = usersList.filter((u) => {
                         </button>
 
                       </td>
-                      <td>{purchase.receipt_image}</td>
 
                     </tr>
 
